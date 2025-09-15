@@ -192,43 +192,6 @@ struct QuickActionButtons: View {
     }
 }
 
-// MARK: - MessageInputView.swift
-struct MessageInputView: View {
-    @Binding var newMessage: String
-    @Binding var userName: String
-    let onSend: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            Divider()
-            
-            VStack(spacing: 8) {
-                TextField("ユーザー名（任意）", text: $userName)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .font(.system(size: 14))
-                
-                HStack {
-                    TextField("メッセージを入力...", text: $newMessage, axis: .vertical)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .font(.system(size: 14))
-                    
-                    Button(action: onSend) {
-                        Image(systemName: "paperplane.fill")
-                            .foregroundColor(.white)
-                            .frame(width: 32, height: 32)
-                            .background(newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : Color.blue)
-                            .cornerRadius(16)
-                    }
-                    .disabled(newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-        }
-        .background(Color(.systemGray6))
-    }
-}
-
 // MARK: - MessagesList.swift
 struct MessagesList: View {
     let messages: [Message]
