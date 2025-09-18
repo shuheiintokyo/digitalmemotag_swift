@@ -12,57 +12,137 @@ struct QRScannerView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 30) {
-                // Header
-                VStack(spacing: 10) {
-                    Image(systemName: "qrcode.viewfinder")
-                        .font(.system(size: 80))
-                        .foregroundColor(.blue)
-                    
-                    Text("QRコードスキャン")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    
-                    Text("製品のQRコードをスキャンしてアクセス")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+            VStack(spacing: 0) {
+                // Logo Header with branding
+                QRScannerHeaderView()
                 
-                // Buttons
-                VStack(spacing: 16) {
-                    Button(action: { isPresentingScanner = true }) {
-                        HStack {
-                            Image(systemName: "camera")
-                            Text("QRコードをスキャン")
+                // Main content
+                ScrollView {
+                    VStack(spacing: 40) {
+                        // Hero section with logo
+                        VStack(spacing: 20) {
+                            LogoView(size: .large, showTagline: true)
+                            
+                            Text("製品のQRコードをスキャンしてアクセス")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
                         }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(12)
-                    }
-                    
-                    Button(action: { showingManualEntry = true }) {
-                        HStack {
-                            Image(systemName: "keyboard")
-                            Text("手動で製品IDを入力")
+                        .padding(.top, 20)
+                        
+                        // Action buttons with enhanced design
+                        VStack(spacing: 20) {
+                            // Primary scan button
+                            Button(action: { isPresentingScanner = true }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "camera.fill")
+                                        .font(.title2)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("QRコードをスキャン")
+                                            .font(.headline)
+                                        Text("カメラでスキャン")
+                                            .font(.caption)
+                                            .opacity(0.8)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .opacity(0.6)
+                                }
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(
+                                    LinearGradient(
+                                        colors: [.blue, .purple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(16)
+                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                            }
+                            
+                            // Secondary manual entry button
+                            Button(action: { showingManualEntry = true }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "keyboard")
+                                        .font(.title2)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("手動で製品IDを入力")
+                                            .font(.headline)
+                                        Text("IDを直接入力")
+                                            .font(.caption)
+                                            .opacity(0.8)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .opacity(0.6)
+                                }
+                                .foregroundColor(.blue)
+                                .padding()
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(16)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                )
+                            }
                         }
-                        .font(.headline)
-                        .foregroundColor(.blue)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(12)
+                        .padding(.horizontal, 24)
+                        
+                        // Features section
+                        VStack(spacing: 16) {
+                            Text("機能")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
+                                FeatureCard(
+                                    icon: "bolt.fill",
+                                    title: "高速スキャン",
+                                    description: "瞬時に製品を識別",
+                                    color: .orange
+                                )
+                                
+                                FeatureCard(
+                                    icon: "message.fill",
+                                    title: "メッセージ機能",
+                                    description: "リアルタイム通信",
+                                    color: .green
+                                )
+                                
+                                FeatureCard(
+                                    icon: "chart.bar.fill",
+                                    title: "ステータス管理",
+                                    description: "作業状況を追跡",
+                                    color: .blue
+                                )
+                                
+                                FeatureCard(
+                                    icon: "location.fill",
+                                    title: "位置情報",
+                                    description: "製品の場所を記録",
+                                    color: .purple
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        
+                        Spacer(minLength: 40)
                     }
                 }
-                .padding(.horizontal, 40)
-                
-                Spacer()
             }
-            .padding()
-            .navigationTitle("QRスキャン")
+            .navigationTitle("")
+            .navigationBarHidden(true)
         }
         .navigationViewStyle(StackNavigationViewStyle())
         .sheet(isPresented: $isPresentingScanner) {
@@ -122,5 +202,76 @@ struct QRScannerView: View {
         }
         // Otherwise, assume code is the item ID
         return code
+    }
+}
+
+// MARK: - QR Scanner Header
+struct QRScannerHeaderView: View {
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("QRスキャン")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                
+                Text("FAST SERVICE")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.orange)
+                    .tracking(1)
+            }
+            
+            Spacer()
+            
+            LogoView(size: .small, showTagline: false)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+        .background(
+            LinearGradient(
+                colors: [Color(.systemBackground), Color(.systemGray6)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .shadow(color: .gray.opacity(0.1), radius: 1, x: 0, y: 1)
+    }
+}
+
+// MARK: - Feature Card Component
+struct FeatureCard: View {
+    let icon: String
+    let title: String
+    let description: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(color)
+                .frame(width: 40, height: 40)
+                .background(color.opacity(0.15))
+                .cornerRadius(12)
+            
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: .gray.opacity(0.1), radius: 4, x: 0, y: 2)
     }
 }

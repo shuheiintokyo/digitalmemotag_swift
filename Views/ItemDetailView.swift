@@ -83,7 +83,7 @@ struct ItemDetailView: View {
     }
     
     private func handleQuickAction(_ messageType: MessageType) {
-        let message = messageType.buttonText
+        let message = getButtonText(for: messageType)
         itemManager.addMessage(to: item, message: message, userName: "システム", type: messageType)
     }
     
@@ -99,6 +99,17 @@ struct ItemDetailView: View {
                 type: .general
             )
             newMessage = ""
+        }
+    }
+    
+    // Helper function to get button text for message types
+    private func getButtonText(for messageType: MessageType) -> String {
+        switch messageType {
+        case .general: return ""
+        case .blue: return UserDefaults.standard.string(forKey: "quickActionBlue") ?? "作業を開始しました"
+        case .green: return UserDefaults.standard.string(forKey: "quickActionGreen") ?? "作業を完了しました"
+        case .yellow: return UserDefaults.standard.string(forKey: "quickActionYellow") ?? "作業に遅れが生じています"
+        case .red: return UserDefaults.standard.string(forKey: "quickActionRed") ?? "問題が発生しました。"
         }
     }
 }
@@ -172,9 +183,10 @@ struct QuickActionButtons: View {
                 .padding(.top)
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
-                ForEach(quickActions, id: \.self) { action in
+                ForEach(quickActions.indices, id: \.self) { index in
+                    let action = quickActions[index]
                     Button(action: { onAction(action) }) {
-                        Text(action.buttonText)
+                        Text(getButtonText(for: action))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
@@ -189,6 +201,17 @@ struct QuickActionButtons: View {
         }
         .padding(.bottom)
         .background(Color(.systemBackground))
+    }
+    
+    // Helper function to get button text for message types
+    private func getButtonText(for messageType: MessageType) -> String {
+        switch messageType {
+        case .general: return ""
+        case .blue: return UserDefaults.standard.string(forKey: "quickActionBlue") ?? "作業を開始しました"
+        case .green: return UserDefaults.standard.string(forKey: "quickActionGreen") ?? "作業を完了しました"
+        case .yellow: return UserDefaults.standard.string(forKey: "quickActionYellow") ?? "作業に遅れが生じています"
+        case .red: return UserDefaults.standard.string(forKey: "quickActionRed") ?? "問題が発生しました。"
+        }
     }
 }
 
@@ -212,7 +235,8 @@ struct MessagesList: View {
                 .padding(.vertical, 40)
                 .listRowSeparator(.hidden)
             } else {
-                ForEach(messages, id: \.id) { message in
+                ForEach(messages.indices, id: \.self) { index in
+                    let message = messages[index]
                     MessageRowView(message: message, onDelete: onDelete)
                 }
             }
@@ -373,114 +397,5 @@ struct QRCodeDisplayView: View {
     private func saveQRCodeToPhotos() {
         guard let image = qrCodeImage else { return }
         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-    }
-}
-
-// MARK: - SettingsView.swift
-struct SettingsView: View {
-    @AppStorage("quickActionBlue") private var quickActionBlue = "作業を開始しました"
-    @AppStorage("quickActionGreen") private var quickActionGreen = "作業を完了しました"
-    @AppStorage("quickActionYellow") private var quickActionYellow = "作業に遅れが生じています"
-    @AppStorage("quickActionRed") private var quickActionRed = "問題が発生しました。"
-    
-    @State private var showingResetAlert = false
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("クイックアクションボタン設定")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("青ボタン")
-                            .font(.headline)
-                            .foregroundColor(.blue)
-                        TextField("青ボタンのメッセージ", text: $quickActionBlue)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    .padding(.vertical, 4)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("緑ボタン")
-                            .font(.headline)
-                            .foregroundColor(.green)
-                        TextField("緑ボタンのメッセージ", text: $quickActionGreen)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    .padding(.vertical, 4)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("黄ボタン")
-                            .font(.headline)
-                            .foregroundColor(.orange)
-                        TextField("黄ボタンのメッセージ", text: $quickActionYellow)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    .padding(.vertical, 4)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("赤ボタン")
-                            .font(.headline)
-                            .foregroundColor(.red)
-                        TextField("赤ボタンのメッセージ", text: $quickActionRed)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    .padding(.vertical, 4)
-                }
-                
-                Section(header: Text("データ管理")) {
-                    Button("設定をリセット") {
-                        showingResetAlert = true
-                    }
-                    .foregroundColor(.red)
-                }
-                
-                Section(header: Text("アプリ情報")) {
-                    HStack {
-                        Text("バージョン")
-                        Spacer()
-                        Text("1.0.0")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("開発者")
-                        Spacer()
-                        Text("DigitalMemoTag Team")
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            .navigationTitle("設定")
-        }
-        .navigationViewStyle(StackNavigationViewStyle())
-        .alert(isPresented: $showingResetAlert) {
-            Alert(
-                title: Text("設定をリセット"),
-                message: Text("すべての設定をデフォルト値に戻しますか？"),
-                primaryButton: .destructive(Text("リセット")) {
-                    resetSettings()
-                },
-                secondaryButton: .cancel(Text("キャンセル"))
-            )
-        }
-    }
-    
-    private func resetSettings() {
-        quickActionBlue = "作業を開始しました"
-        quickActionGreen = "作業を完了しました"
-        quickActionYellow = "作業に遅れが生じています"
-        quickActionRed = "問題が発生しました。"
-    }
-}
-
-// MARK: - Update MessageType to use AppStorage
-extension MessageType {
-    var buttonText: String {
-        switch self {
-        case .general: return ""
-        case .blue: return UserDefaults.standard.string(forKey: "quickActionBlue") ?? "作業を開始しました"
-        case .green: return UserDefaults.standard.string(forKey: "quickActionGreen") ?? "作業を完了しました"
-        case .yellow: return UserDefaults.standard.string(forKey: "quickActionYellow") ?? "作業に遅れが生じています"
-        case .red: return UserDefaults.standard.string(forKey: "quickActionRed") ?? "問題が発生しました。"
-        }
     }
 }
