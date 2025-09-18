@@ -373,7 +373,8 @@ struct QRCodeDisplayView: View {
         guard let itemId = item.itemId else { return }
         
         // Create QR code data with item ID
-        let qrCodeData = itemId.data(using: .utf8)
+        let qrContent = "digitalmemotag://product/\(itemId)"
+        let qrCodeData = qrContent.data(using: .utf8)
         
         guard let qrCodeData = qrCodeData,
               let filter = CIFilter(name: "CIQRCodeGenerator") else { return }

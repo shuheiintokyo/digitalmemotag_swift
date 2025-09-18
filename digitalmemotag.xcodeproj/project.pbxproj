@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		052248162E7BF05A00A2E1BE /* Appwrite in Frameworks */ = {isa = PBXBuildFile; productRef = 052248152E7BF05A00A2E1BE /* Appwrite */; };
 		059FEFD82E77AACD008DC185 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD72E77AACD008DC185 /* App.swift */; };
 		059FEFDA2E77AACD008DC185 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD92E77AACD008DC185 /* ContentView.swift */; };
 		059FEFE12E77AACF008DC185 /* digitalmemotag.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFDF2E77AACF008DC185 /* digitalmemotag.xcdatamodeld */; };
@@ -32,6 +33,7 @@
 		059FF0532E77D155008DC185 /* QRCodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0512E77D153008DC185 /* QRCodeScannerView.swift */; };
 		059FF0562E77D189008DC185 /* ManualEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0542E77D188008DC185 /* ManualEntryView.swift */; };
 		059FF0642E7B99E9008DC185 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0632E7B99E1008DC185 /* SettingsView.swift */; };
+		059FF06A2E7BDFC3008DC185 /* AppwriteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0692E7BDFBF008DC185 /* AppwriteService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -80,11 +82,25 @@
 		059FF0512E77D153008DC185 /* QRCodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeScannerView.swift; sourceTree = "<group>"; };
 		059FF0542E77D188008DC185 /* ManualEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualEntryView.swift; sourceTree = "<group>"; };
 		059FF0632E7B99E1008DC185 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		059FF0692E7BDFBF008DC185 /* AppwriteService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppwriteService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		052248182E7BF90200A2E1BE /* Exceptions for "digitalmemotag" folder in "digitalmemotag" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 059FEFD32E77AACD008DC185 /* digitalmemotag */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		059FEFD62E77AACD008DC185 /* digitalmemotag */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				052248182E7BF90200A2E1BE /* Exceptions for "digitalmemotag" folder in "digitalmemotag" target */,
+			);
 			path = digitalmemotag;
 			sourceTree = "<group>";
 		};
@@ -95,6 +111,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				052248162E7BF05A00A2E1BE /* Appwrite in Frameworks */,
 				059FF03C2E77C813008DC185 /* CoreData.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -173,6 +190,7 @@
 		059FF05A2E77D2E5008DC185 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				059FF0692E7BDFBF008DC185 /* AppwriteService.swift */,
 				059FF0542E77D188008DC185 /* ManualEntryView.swift */,
 				059FF04E2E77D121008DC185 /* QRScannerView.swift */,
 				059FF03F2E77CFB8008DC185 /* MessageInputView.swift */,
@@ -243,6 +261,7 @@
 			);
 			name = digitalmemotag;
 			packageProductDependencies = (
+				052248152E7BF05A00A2E1BE /* Appwrite */,
 			);
 			productName = digitalmemotag;
 			productReference = 059FEFD42E77AACD008DC185 /* digitalmemotag.app */;
@@ -320,6 +339,9 @@
 			);
 			mainGroup = 059FEFCB2E77AACD008DC185;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				059FF06B2E7BE619008DC185 /* XCRemoteSwiftPackageReference "sdk-for-apple" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 059FEFD52E77AACD008DC185 /* Products */;
 			projectDirPath = "";
@@ -384,6 +406,7 @@
 				059FF0532E77D155008DC185 /* QRCodeScannerView.swift in Sources */,
 				059FF0192E77B717008DC185 /* ErrorHandling.swift in Sources */,
 				059FF0132E77B6CF008DC185 /* View+Extensions.swift in Sources */,
+				059FF06A2E7BDFC3008DC185 /* AppwriteService.swift in Sources */,
 				059FF00D2E77B685008DC185 /* Date+Extensions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -547,6 +570,7 @@
 				DEVELOPMENT_TEAM = 2U6HGW7K5L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = digitalmemotag/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "QRコードをスキャンするためにカメラへのアクセスが必要です。";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "QRコードの画像を保存するためにフォトライブラリへのアクセスが必要です。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -560,7 +584,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.shuhei.digitalmemotag.digitalmemotag;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuhei.digitalmemotag;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -578,6 +602,7 @@
 				DEVELOPMENT_TEAM = 2U6HGW7K5L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = digitalmemotag/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "QRコードをスキャンするためにカメラへのアクセスが必要です。";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "QRコードの画像を保存するためにフォトライブラリへのアクセスが必要です。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -591,7 +616,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.shuhei.digitalmemotag.digitalmemotag;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuhei.digitalmemotag;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -707,6 +732,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		059FF06B2E7BE619008DC185 /* XCRemoteSwiftPackageReference "sdk-for-apple" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/appwrite/sdk-for-apple";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		052248152E7BF05A00A2E1BE /* Appwrite */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 059FF06B2E7BE619008DC185 /* XCRemoteSwiftPackageReference "sdk-for-apple" */;
+			productName = Appwrite;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */
 		059FEFDF2E77AACF008DC185 /* digitalmemotag.xcdatamodeld */ = {
