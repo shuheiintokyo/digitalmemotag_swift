@@ -1,0 +1,13 @@
+# Xcode
+build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+project.xcworkspace/xcshareddata/
+.DS_Store
+DerivedData/
+*.xccheckout
+*.moved-aside
+*.xcuserstate
