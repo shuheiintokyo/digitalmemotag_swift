@@ -15,7 +15,7 @@ class AppwriteService: ObservableObject {
     let databases: Databases
     
     // PRODUCTION: Use the correct database ID from your Appwrite dashboard
-    let databaseId = "68cba0e00372afe7c23"  // Verify this ID in your Appwrite console
+    let databaseId = "68cbba0e00372afe7c23"  // Verify this ID in your Appwrite console
     let itemsCollectionId = "items"
     let messagesCollectionId = "messages"
     
