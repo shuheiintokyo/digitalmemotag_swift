@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		052248162E7BF05A00A2E1BE /* Appwrite in Frameworks */ = {isa = PBXBuildFile; productRef = 052248152E7BF05A00A2E1BE /* Appwrite */; };
+		0522481E2E7CD5BB00A2E1BE /* DebugConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522481D2E7CD5B900A2E1BE /* DebugConnectionView.swift */; };
+		052248202E7CD6ED00A2E1BE /* QRCodeDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522481F2E7CD6EC00A2E1BE /* QRCodeDisplayView.swift */; };
 		059FEFD82E77AACD008DC185 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD72E77AACD008DC185 /* App.swift */; };
 		059FEFDA2E77AACD008DC185 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD92E77AACD008DC185 /* ContentView.swift */; };
 		059FEFE12E77AACF008DC185 /* digitalmemotag.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFDF2E77AACF008DC185 /* digitalmemotag.xcdatamodeld */; };
@@ -54,6 +56,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0522481D2E7CD5B900A2E1BE /* DebugConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugConnectionView.swift; sourceTree = "<group>"; };
+		0522481F2E7CD6EC00A2E1BE /* QRCodeDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeDisplayView.swift; sourceTree = "<group>"; };
 		059FEFD42E77AACD008DC185 /* digitalmemotag.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = digitalmemotag.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		059FEFD72E77AACD008DC185 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		059FEFD92E77AACD008DC185 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -179,6 +183,8 @@
 		059FF0592E77D2DE008DC185 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				0522481F2E7CD6EC00A2E1BE /* QRCodeDisplayView.swift */,
+				0522481D2E7CD5B900A2E1BE /* DebugConnectionView.swift */,
 				059FF0632E7B99E1008DC185 /* SettingsView.swift */,
 				059FF0032E77ABA7008DC185 /* DashboardView.swift */,
 				059FF0062E77ABD5008DC185 /* ItemDetailView.swift */,
@@ -393,6 +399,7 @@
 				059FF0322E77C648008DC185 /* ItemStatus.swift in Sources */,
 				059FF04A2E77D0C8008DC185 /* EmptyStateView.swift in Sources */,
 				059FF0642E7B99E9008DC185 /* SettingsView.swift in Sources */,
+				0522481E2E7CD5BB00A2E1BE /* DebugConnectionView.swift in Sources */,
 				059FF0502E77D122008DC185 /* QRScannerView.swift in Sources */,
 				059FF0102E77B6B0008DC185 /* String+Extensions.swift in Sources */,
 				059FEFDA2E77AACD008DC185 /* ContentView.swift in Sources */,
@@ -405,6 +412,7 @@
 				059FF0472E77D05B008DC185 /* ItemSearchField.swift in Sources */,
 				059FF0532E77D155008DC185 /* QRCodeScannerView.swift in Sources */,
 				059FF0192E77B717008DC185 /* ErrorHandling.swift in Sources */,
+				052248202E7CD6ED00A2E1BE /* QRCodeDisplayView.swift in Sources */,
 				059FF0132E77B6CF008DC185 /* View+Extensions.swift in Sources */,
 				059FF06A2E7BDFC3008DC185 /* AppwriteService.swift in Sources */,
 				059FF00D2E77B685008DC185 /* Date+Extensions.swift in Sources */,

@@ -373,7 +373,9 @@ struct QRCodeDisplayView: View {
         guard let itemId = item.itemId else { return }
         
         // Create QR code data with item ID
-        let qrContent = "digitalmemotag://product/\(itemId)"
+//        let qrCodeData = itemId.data(using: .utf8)
+        
+        let qrContent = "https://digitalmemotag.app/item?item_id=ITEM_ID"
         let qrCodeData = qrContent.data(using: .utf8)
         
         guard let qrCodeData = qrCodeData,
