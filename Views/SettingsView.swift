@@ -14,6 +14,27 @@ struct SettingsView: View {
         NavigationView {
             List {
                 // Quick Action Settings
+                
+                // Add this section to your existing SettingsView
+                Section(header: Text("アカウント")) {
+                    if let user = AuthenticationService.shared.currentUser {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(user.name.isEmpty ? "ユーザー" : user.name)
+                                .font(.headline)
+                            Text(user.email)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                        
+                        Button("ログアウト") {
+                            Task {
+                                await AuthenticationService.shared.logout()
+                            }
+                        }
+                        .foregroundColor(.red)
+                    }
+                }
                 Section(header: Text("クイックアクションボタン設定")) {
                     QuickActionSetting(
                         title: "青ボタン",
@@ -265,3 +286,5 @@ struct AboutFeatureCard: View {
         .cornerRadius(12)
     }
 }
+
+

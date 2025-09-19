@@ -3,14 +3,23 @@ import SwiftUI
 @main
 struct digitalmemotagApp: App {
     let persistenceController = PersistenceController.shared
+    @StateObject private var authService = AuthenticationService.shared
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
-                .onOpenURL { url in
-                    handleIncomingURL(url)
-                }
+            if authService.isAuthenticated {
+                ContentView()
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                    .onOpenURL { url in
+                        handleIncomingURL(url)
+                    }
+            } else {
+                LoginView()
+                    .onOpenURL { url in
+                        // Handle OAuth callbacks
+                        handleOAuthCallback(url)
+                    }
+            }
         }
     }
     
@@ -25,7 +34,15 @@ struct digitalmemotagApp: App {
         print("Product ID from URL: \(productId)")
         
         // TODO: Navigate to the product page
-        // You'll need to implement navigation logic here
-        // For example, set a @State variable that triggers navigation
+    }
+    
+    private func handleOAuthCallback(_ url: URL) {
+        print("OAuth callback URL: \(url)")
+        
+        // Handle Appwrite OAuth callbacks
+        if url.absoluteString.contains("appwrite-callback") {
+            // The SDK handles this automatically
+            print("Appwrite OAuth callback received")
+        }
     }
 }

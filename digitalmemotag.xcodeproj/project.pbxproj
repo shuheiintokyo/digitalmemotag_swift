@@ -14,6 +14,8 @@
 		052248272E7CEFF500A2E1BE /* QRCodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248262E7CEFEA00A2E1BE /* QRCodeScannerView.swift */; };
 		052248292E7CF05F00A2E1BE /* CoreData+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248282E7CF05500A2E1BE /* CoreData+Extensions.swift */; };
 		0522482B2E7CF7E500A2E1BE /* ItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522482A2E7CF7DD00A2E1BE /* ItemManager.swift */; };
+		052248312E7DAA1C00A2E1BE /* AuthenticationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248302E7DAA1700A2E1BE /* AuthenticationService.swift */; };
+		052248332E7DAB0200A2E1BE /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248322E7DAAFC00A2E1BE /* LoginView.swift */; };
 		059FEFD82E77AACD008DC185 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD72E77AACD008DC185 /* App.swift */; };
 		059FEFDA2E77AACD008DC185 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD92E77AACD008DC185 /* ContentView.swift */; };
 		059FEFE12E77AACF008DC185 /* digitalmemotag.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFDF2E77AACF008DC185 /* digitalmemotag.xcdatamodeld */; };
@@ -65,6 +67,8 @@
 		052248262E7CEFEA00A2E1BE /* QRCodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeScannerView.swift; sourceTree = "<group>"; };
 		052248282E7CF05500A2E1BE /* CoreData+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CoreData+Extensions.swift"; sourceTree = "<group>"; };
 		0522482A2E7CF7DD00A2E1BE /* ItemManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemManager.swift; sourceTree = "<group>"; };
+		052248302E7DAA1700A2E1BE /* AuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationService.swift; sourceTree = "<group>"; };
+		052248322E7DAAFC00A2E1BE /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		059FEFD42E77AACD008DC185 /* digitalmemotag.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = digitalmemotag.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		059FEFD72E77AACD008DC185 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		059FEFD92E77AACD008DC185 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -189,6 +193,7 @@
 		059FF0592E77D2DE008DC185 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				052248322E7DAAFC00A2E1BE /* LoginView.swift */,
 				0522481D2E7CD5B900A2E1BE /* DebugConnectionView.swift */,
 				059FF0632E7B99E1008DC185 /* SettingsView.swift */,
 				059FF0062E77ABD5008DC185 /* CloudItemDetailView.swift */,
@@ -201,6 +206,7 @@
 		059FF05A2E77D2E5008DC185 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				052248302E7DAA1700A2E1BE /* AuthenticationService.swift */,
 				052248262E7CEFEA00A2E1BE /* QRCodeScannerView.swift */,
 				059FF0692E7BDFBF008DC185 /* AppwriteService.swift */,
 				059FF0542E77D188008DC185 /* ManualEntryView.swift */,
@@ -423,10 +429,12 @@
 				052248272E7CEFF500A2E1BE /* QRCodeScannerView.swift in Sources */,
 				059FF0472E77D05B008DC185 /* ItemSearchField.swift in Sources */,
 				059FF0532E77D155008DC185 /* CloudQRScannerView.swift in Sources */,
+				052248312E7DAA1C00A2E1BE /* AuthenticationService.swift in Sources */,
 				059FF0192E77B717008DC185 /* ErrorHandling.swift in Sources */,
 				059FF0132E77B6CF008DC185 /* View+Extensions.swift in Sources */,
 				059FF06A2E7BDFC3008DC185 /* AppwriteService.swift in Sources */,
 				059FF00D2E77B685008DC185 /* Date+Extensions.swift in Sources */,
+				052248332E7DAB0200A2E1BE /* LoginView.swift in Sources */,
 				052248292E7CF05F00A2E1BE /* CoreData+Extensions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
