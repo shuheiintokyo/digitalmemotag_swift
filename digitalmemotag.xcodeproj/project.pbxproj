@@ -11,6 +11,8 @@
 		0522481E2E7CD5BB00A2E1BE /* DebugConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522481D2E7CD5B900A2E1BE /* DebugConnectionView.swift */; };
 		052248222E7CD8ED00A2E1BE /* ImageSaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248212E7CD8D400A2E1BE /* ImageSaver.swift */; };
 		052248242E7CEC4300A2E1BE /* CloudModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248232E7CEC4100A2E1BE /* CloudModels.swift */; };
+		052248272E7CEFF500A2E1BE /* QRCodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248262E7CEFEA00A2E1BE /* QRCodeScannerView.swift */; };
+		052248292E7CF05F00A2E1BE /* CoreData+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248282E7CF05500A2E1BE /* CoreData+Extensions.swift */; };
 		059FEFD82E77AACD008DC185 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD72E77AACD008DC185 /* App.swift */; };
 		059FEFDA2E77AACD008DC185 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD92E77AACD008DC185 /* ContentView.swift */; };
 		059FEFE12E77AACF008DC185 /* digitalmemotag.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFDF2E77AACF008DC185 /* digitalmemotag.xcdatamodeld */; };
@@ -59,6 +61,8 @@
 		0522481D2E7CD5B900A2E1BE /* DebugConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugConnectionView.swift; sourceTree = "<group>"; };
 		052248212E7CD8D400A2E1BE /* ImageSaver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSaver.swift; sourceTree = "<group>"; };
 		052248232E7CEC4100A2E1BE /* CloudModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudModels.swift; sourceTree = "<group>"; };
+		052248262E7CEFEA00A2E1BE /* QRCodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeScannerView.swift; sourceTree = "<group>"; };
+		052248282E7CF05500A2E1BE /* CoreData+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CoreData+Extensions.swift"; sourceTree = "<group>"; };
 		059FEFD42E77AACD008DC185 /* digitalmemotag.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = digitalmemotag.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		059FEFD72E77AACD008DC185 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		059FEFD92E77AACD008DC185 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -195,6 +199,7 @@
 		059FF05A2E77D2E5008DC185 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				052248262E7CEFEA00A2E1BE /* QRCodeScannerView.swift */,
 				059FF0692E7BDFBF008DC185 /* AppwriteService.swift */,
 				059FF0542E77D188008DC185 /* ManualEntryView.swift */,
 				059FF03F2E77CFB8008DC185 /* MessageInputView.swift */,
@@ -229,6 +234,7 @@
 		059FF05D2E77D2FC008DC185 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				052248282E7CF05500A2E1BE /* CoreData+Extensions.swift */,
 				059FF0142E77B6F0008DC185 /* UserDefaults+Extensions.swift */,
 				059FF00E2E77B6A6008DC185 /* String+Extensions.swift */,
 				059FF0112E77B6CD008DC185 /* View+Extensions.swift */,
@@ -410,12 +416,14 @@
 				059FF0442E77D02E008DC185 /* ItemRowView.swift in Sources */,
 				059FEFD82E77AACD008DC185 /* App.swift in Sources */,
 				059FEFE12E77AACF008DC185 /* digitalmemotag.xcdatamodeld in Sources */,
+				052248272E7CEFF500A2E1BE /* QRCodeScannerView.swift in Sources */,
 				059FF0472E77D05B008DC185 /* ItemSearchField.swift in Sources */,
 				059FF0532E77D155008DC185 /* CloudQRScannerView.swift in Sources */,
 				059FF0192E77B717008DC185 /* ErrorHandling.swift in Sources */,
 				059FF0132E77B6CF008DC185 /* View+Extensions.swift in Sources */,
 				059FF06A2E7BDFC3008DC185 /* AppwriteService.swift in Sources */,
 				059FF00D2E77B685008DC185 /* Date+Extensions.swift in Sources */,
+				052248292E7CF05F00A2E1BE /* CoreData+Extensions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

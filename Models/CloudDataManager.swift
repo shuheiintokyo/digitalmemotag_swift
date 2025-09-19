@@ -1,4 +1,4 @@
-// MARK: - CloudDataManager.swift (Replace ItemManager)
+// MARK: - CloudDataManager.swift (Replace existing file with this)
 import Foundation
 import CoreData
 import Appwrite
@@ -6,59 +6,40 @@ import SwiftUI
 
 @MainActor
 class CloudDataManager: ObservableObject {
+    // MARK: - Singleton
+    static let shared = CloudDataManager()
+    
     // MARK: - Published Properties
     @Published var items: [CloudItem] = []
     @Published var isLoading = false
     @Published var isOnline = true
     @Published var lastError: String?
     @Published var syncStatus: SyncStatus = .idle
+    @Published var lastSyncTime: Date?
     
     // MARK: - Private Properties
     private let appwriteService = AppwriteService.shared
     private let viewContext: NSManagedObjectContext
     private var refreshTimer: Timer?
+    private var isSyncing = false
     
-    enum SyncStatus {
-        case idle
-        case syncing
-        case success
-        case offline
-        case error(String)
-        
-        var displayText: String {
-            switch self {
-            case .idle: return "待機中"
-            case .syncing: return "同期中..."
-            case .success: return "同期完了"
-            case .offline: return "オフライン"
-            case .error(let message): return "エラー: \(message)"
-            }
-        }
-        
-        var color: Color {
-            switch self {
-            case .idle: return .gray
-            case .syncing: return .blue
-            case .success: return .green
-            case .offline: return .orange
-            case .error: return .red
-            }
-        }
-    }
-    
-    init(context: NSManagedObjectContext) {
-        self.viewContext = context
-        startPeriodicRefresh()
+    // MARK: - Initialization
+    private init() {
+        self.viewContext = PersistenceController.shared.container.viewContext
         
         // Initial load
         Task {
             await loadItems()
+            startPeriodicRefresh()
         }
     }
     
-    // MARK: - Cloud-First Operations
+    // MARK: - Public Interface
     
     func loadItems() async {
+        guard !isSyncing else { return }
+        
+        isSyncing = true
         isLoading = true
         syncStatus = .syncing
         
@@ -66,9 +47,20 @@ class CloudDataManager: ObservableObject {
             // 1. Try to load from cloud first
             let cloudItemsData = try await appwriteService.getAllItems()
             
-            // 2. Convert to CloudItem objects
-            let cloudItems = cloudItemsData.compactMap { data in
-                CloudItem.from(appwriteData: data)
+            // 2. Convert to CloudItem objects and load messages
+            var cloudItems: [CloudItem] = []
+            
+            for itemData in cloudItemsData {
+                if var cloudItem = CloudItem.from(appwriteData: itemData) {
+                    // Load messages for this item
+                    let messagesData = try await appwriteService.getMessages(for: cloudItem.itemId)
+                    let messages = messagesData.compactMap { data in
+                        CloudMessage.from(appwriteData: data)
+                    }.sorted { $0.createdAt > $1.createdAt }
+                    
+                    cloudItem.messages = messages
+                    cloudItems.append(cloudItem)
+                }
             }
             
             // 3. Update local cache
@@ -79,6 +71,7 @@ class CloudDataManager: ObservableObject {
             isOnline = true
             syncStatus = .success
             lastError = nil
+            lastSyncTime = Date()
             
             print("✅ Loaded \(cloudItems.count) items from cloud")
             
@@ -93,9 +86,13 @@ class CloudDataManager: ObservableObject {
         }
         
         isLoading = false
+        isSyncing = false
     }
     
     func createItem(name: String, location: String) async -> CloudItem? {
+        guard !isSyncing else { return nil }
+        
+        isSyncing = true
         isLoading = true
         syncStatus = .syncing
         
@@ -132,8 +129,12 @@ class CloudDataManager: ObservableObject {
             isOnline = true
             syncStatus = .success
             lastError = nil
+            lastSyncTime = Date()
             
             print("✅ Created item in cloud: \(itemId)")
+            
+            isSyncing = false
+            isLoading = false
             return newItem
             
         } catch {
@@ -142,13 +143,16 @@ class CloudDataManager: ObservableObject {
             lastError = "アイテム作成に失敗: \(error.localizedDescription)"
             
             print("❌ Failed to create item in cloud: \(error)")
+            
+            isSyncing = false
+            isLoading = false
             return nil
         }
-        
-        isLoading = false
     }
     
     func addMessage(to item: CloudItem, message: String, userName: String = "匿名", type: MessageType = .general) async -> Bool {
+        guard !isSyncing else { return false }
+        
         syncStatus = .syncing
         
         do {
@@ -200,6 +204,7 @@ class CloudDataManager: ObservableObject {
             isOnline = true
             syncStatus = .success
             lastError = nil
+            lastSyncTime = Date()
             
             print("✅ Added message to cloud for item: \(item.itemId)")
             return true
@@ -237,12 +242,14 @@ class CloudDataManager: ObservableObject {
     
     func deleteItem(_ item: CloudItem) async -> Bool {
         do {
-            // Delete from cloud first
-            // Note: You'll need to add a delete method to AppwriteService
+            // Delete from cloud (you'll need to add this method to AppwriteService)
             // try await appwriteService.deleteItem(itemId: item.itemId)
             
             // Remove from local array
             items.removeAll { $0.id == item.id }
+            
+            // Remove from local cache
+            await removeFromLocalCache(item)
             
             print("✅ Deleted item: \(item.itemId)")
             return true
@@ -256,6 +263,10 @@ class CloudDataManager: ObservableObject {
     
     func refreshData() async {
         await loadItems()
+    }
+    
+    func findItem(byId itemId: String) -> CloudItem? {
+        return items.first { $0.itemId == itemId }
     }
     
     // MARK: - Local Caching (for offline support)
@@ -303,58 +314,38 @@ class CloudDataManager: ObservableObject {
         }
     }
     
-    private func loadFromLocalCache() async {
+    private func removeFromLocalCache(_ cloudItem: CloudItem) async {
         let request: NSFetchRequest<Item> = Item.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Item.createdAt, ascending: false)]
+        request.predicate = NSPredicate(format: "itemId == %@", cloudItem.itemId)
         
         do {
-            let cachedItems = try viewContext.fetch(request)
-            
-            let cloudItems = cachedItems.compactMap { item -> CloudItem? in
-                guard let itemId = item.itemId,
-                      let name = item.name else { return nil }
-                
-                let messages = (item.messages?.allObjects as? [Message])?.compactMap { message -> CloudMessage? in
-                    guard let messageText = message.message,
-                          let userName = message.userName,
-                          let msgType = message.msgType else { return nil }
-                    
-                    return CloudMessage(
-                        id: message.id?.uuidString ?? UUID().uuidString,
-                        itemId: message.itemId ?? "",
-                        message: messageText,
-                        userName: userName,
-                        messageType: MessageType(rawValue: msgType) ?? .general,
-                        createdAt: message.createdAt ?? Date()
-                    )
-                } ?? []
-                
-                return CloudItem(
-                    id: item.id?.uuidString ?? UUID().uuidString,
-                    itemId: itemId,
-                    name: name,
-                    location: item.location ?? "",
-                    status: ItemStatus(rawValue: item.status ?? "Working") ?? .working,
-                    createdAt: item.createdAt ?? Date(),
-                    updatedAt: item.updatedAt ?? Date(),
-                    messages: messages.sorted { $0.createdAt > $1.createdAt }
-                )
+            let items = try viewContext.fetch(request)
+            for item in items {
+                viewContext.delete(item)
             }
-            
-            items = cloudItems
-            
-            print("📱 Loaded \(cloudItems.count) items from local cache")
-            
+            try viewContext.save()
         } catch {
-            print("❌ Failed to load from local cache: \(error)")
+            print("❌ Failed to remove from local cache: \(error)")
         }
+    }
+    
+    private func loadFromLocalCache() async {
+        let cachedItems = Item.fetchAllItems(in: viewContext)
+        
+        let cloudItems = cachedItems.compactMap { item -> CloudItem? in
+            return item.toCloudItem()
+        }
+        
+        items = cloudItems
+        
+        print("📱 Loaded \(cloudItems.count) items from local cache")
     }
     
     // MARK: - Periodic Refresh
     
     private func startPeriodicRefresh() {
-        // Refresh every 30 seconds
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+        // Refresh every 2 minutes
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { _ in
             Task {
                 await self.refreshData()
             }
@@ -382,97 +373,26 @@ class CloudDataManager: ObservableObject {
     }
 }
 
-// MARK: - Cloud Data Models
+// MARK: - Convenience Extensions
 
-struct CloudItem: Identifiable, Hashable {
-    let id: String
-    let itemId: String
-    let name: String
-    let location: String
-    var status: ItemStatus
-    let createdAt: Date
-    var updatedAt: Date
-    var messages: [CloudMessage]
+extension CloudDataManager {
+    var hasItems: Bool {
+        return !items.isEmpty
+    }
     
-    static func from(appwriteData: [String: Any]) -> CloudItem? {
-        guard let id = appwriteData["$id"] as? String,
-              let itemId = appwriteData["item_id"] as? String,
-              let name = appwriteData["name"] as? String else {
-            return nil
+    var itemCount: Int {
+        return items.count
+    }
+    
+    func getItemsFiltered(by searchText: String) -> [CloudItem] {
+        if searchText.isEmpty {
+            return items
+        } else {
+            return items.filter { item in
+                item.name.localizedCaseInsensitiveContains(searchText) ||
+                item.itemId.localizedCaseInsensitiveContains(searchText) ||
+                item.location.localizedCaseInsensitiveContains(searchText)
+            }
         }
-        
-        let location = appwriteData["location"] as? String ?? ""
-        let statusString = appwriteData["status"] as? String ?? "Working"
-        let status = ItemStatus(rawValue: statusString) ?? .working
-        
-        // Parse dates (Appwrite format)
-        let createdAt = parseAppwriteDate(appwriteData["$createdAt"] as? String) ?? Date()
-        let updatedAt = parseAppwriteDate(appwriteData["$updatedAt"] as? String) ?? Date()
-        
-        return CloudItem(
-            id: id,
-            itemId: itemId,
-            name: name,
-            location: location,
-            status: status,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            messages: []
-        )
     }
-    
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-    
-    static func == (lhs: CloudItem, rhs: CloudItem) -> Bool {
-        lhs.id == rhs.id
-    }
-}
-
-struct CloudMessage: Identifiable, Hashable {
-    let id: String
-    let itemId: String
-    let message: String
-    let userName: String
-    let messageType: MessageType
-    let createdAt: Date
-    
-    static func from(appwriteData: [String: Any]) -> CloudMessage? {
-        guard let id = appwriteData["$id"] as? String,
-              let itemId = appwriteData["item_id"] as? String,
-              let message = appwriteData["message"] as? String,
-              let userName = appwriteData["user_name"] as? String else {
-            return nil
-        }
-        
-        let msgTypeString = appwriteData["msg_type"] as? String ?? "general"
-        let messageType = MessageType(rawValue: msgTypeString) ?? .general
-        
-        let createdAt = parseAppwriteDate(appwriteData["$createdAt"] as? String) ?? Date()
-        
-        return CloudMessage(
-            id: id,
-            itemId: itemId,
-            message: message,
-            userName: userName,
-            messageType: messageType,
-            createdAt: createdAt
-        )
-    }
-    
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-}
-
-// MARK: - Helper Functions
-
-private func parseAppwriteDate(_ dateString: String?) -> Date? {
-    guard let dateString = dateString else { return nil }
-    
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    
-    return formatter.date(from: dateString)
 }

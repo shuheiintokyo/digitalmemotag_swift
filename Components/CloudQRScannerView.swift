@@ -1,16 +1,16 @@
 //
-//  CloudQRScannerView.swift
+//  ImprovedCloudQRScannerView.swift
 //  digitalmemotag
 //
-//  Cloud-first QR Scanner with real-time sync
+//  Improved QR Scanner with proper camera permissions and singleton data manager
 //
 
 import SwiftUI
 import CoreData
 import AVFoundation
 
-struct CloudQRScannerView: View {
-    @StateObject private var dataManager = CloudDataManager(context: PersistenceController.shared.container.viewContext)
+struct ImprovedCloudQRScannerView: View {
+    @StateObject private var dataManager = ImprovedCloudDataManager.shared
     @State private var isPresentingScanner = false
     @State private var showingManualEntry = false
     @State private var manualItemId = ""
@@ -19,11 +19,12 @@ struct CloudQRScannerView: View {
     @State private var showingItemDetail = false
     @State private var foundItem: CloudItem?
     @State private var isSearching = false
+    @State private var showingCameraPermissionAlert = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 30) {
-                // Connection Status Bar
+                // Connection Status Header
                 ConnectionStatusHeader(dataManager: dataManager)
                 
                 // Header
@@ -42,7 +43,7 @@ struct CloudQRScannerView: View {
                         .multilineTextAlignment(.center)
                 }
                 
-                // Scanning Status
+                // Searching Status
                 if isSearching {
                     VStack(spacing: 12) {
                         ProgressView()
@@ -59,7 +60,7 @@ struct CloudQRScannerView: View {
                 // Action Buttons
                 VStack(spacing: 16) {
                     Button(action: {
-                        isPresentingScanner = true
+                        checkCameraPermissionAndScan()
                     }) {
                         HStack {
                             Image(systemName: "camera")
@@ -111,7 +112,7 @@ struct CloudQRScannerView: View {
                 .padding(.horizontal, 40)
                 
                 // Recent Items (if any)
-                if !dataManager.items.isEmpty {
+                if dataManager.hasItems {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("最近の製品")
                             .font(.headline)
@@ -144,7 +145,7 @@ struct CloudQRScannerView: View {
             }
         }
         .sheet(isPresented: $showingManualEntry) {
-            CloudManualEntryView(itemId: $manualItemId) { itemId in
+            ImprovedManualEntryView(itemId: $manualItemId) { itemId in
                 showingManualEntry = false
                 if !itemId.isEmpty {
                     handleScannedCode(itemId)
@@ -154,7 +155,7 @@ struct CloudQRScannerView: View {
         .sheet(isPresented: $showingItemDetail) {
             if let item = foundItem {
                 NavigationView {
-                    CloudItemDetailView(item: item, dataManager: dataManager)
+                    ImprovedCloudItemDetailView(item: item)
                         .navigationBarItems(trailing: Button("閉じる") {
                             showingItemDetail = false
                             foundItem = nil
@@ -169,10 +170,38 @@ struct CloudQRScannerView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .alert(isPresented: $showingCameraPermissionAlert) {
+            Alert(
+                title: Text("カメラへのアクセスが必要です"),
+                message: Text("QRコードをスキャンするためにカメラへのアクセスを許可してください。"),
+                primaryButton: .default(Text("設定を開く")) {
+                    openAppSettings()
+                },
+                secondaryButton: .cancel(Text("キャンセル"))
+            )
+        }
         .onAppear {
-            Task {
-                await dataManager.loadItems()
+            // Data is already loaded via singleton, no need to load again
+        }
+    }
+    
+    // MARK: - Camera Permission Handling
+    
+    private func checkCameraPermissionAndScan() {
+        CameraPermissionManager.checkCameraPermission { [self] granted in
+            DispatchQueue.main.async {
+                if granted {
+                    self.isPresentingScanner = true
+                } else {
+                    self.showingCameraPermissionAlert = true
+                }
             }
+        }
+    }
+    
+    private func openAppSettings() {
+        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(settingsURL)
         }
     }
     
@@ -238,7 +267,7 @@ struct CloudQRScannerView: View {
         }
         
         // First check if item is already loaded locally
-        if let localItem = dataManager.items.first(where: { $0.itemId == itemId }) {
+        if let localItem = dataManager.findItem(byId: itemId) {
             await MainActor.run {
                 foundItem = localItem
                 showingItemDetail = true
@@ -268,7 +297,7 @@ struct CloudQRScannerView: View {
                     completeItem.messages = messages
                     
                     await MainActor.run {
-                        // Add to local items array
+                        // Add to local items array in data manager
                         dataManager.items.insert(completeItem, at: 0)
                         
                         foundItem = completeItem
@@ -306,91 +335,7 @@ struct CloudQRScannerView: View {
 
 // MARK: - Supporting Views
 
-struct ConnectionStatusHeader: View {
-    @ObservedObject var dataManager: CloudDataManager
-    
-    var body: some View {
-        HStack {
-            Circle()
-                .fill(dataManager.syncStatus.color)
-                .frame(width: 10, height: 10)
-            
-            Text(dataManager.syncStatus.displayText)
-                .font(.caption)
-                .foregroundColor(dataManager.syncStatus.color)
-            
-            Spacer()
-            
-            if dataManager.isLoading {
-                ProgressView()
-                    .scaleEffect(0.8)
-            }
-            
-            Text("アイテム数: \(dataManager.items.count)")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(Color(.systemGray6))
-        .cornerRadius(8)
-    }
-}
-
-struct RecentItemCard: View {
-    let item: CloudItem
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Circle()
-                        .fill(item.status.color)
-                        .frame(width: 8, height: 8)
-                    
-                    Spacer()
-                    
-                    if item.messageCount > 0 {
-                        Text("\(item.messageCount)")
-                            .font(.caption2)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.blue)
-                            .cornerRadius(8)
-                    }
-                }
-                
-                Text(item.name)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-                
-                Text("ID: \(item.itemId)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                
-                Text(item.status.localizedString)
-                    .font(.caption2)
-                    .foregroundColor(item.status.color)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(item.status.color.opacity(0.1))
-                    .cornerRadius(4)
-            }
-            .padding(12)
-            .frame(width: 120, height: 100)
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-struct CloudManualEntryView: View {
+struct ImprovedManualEntryView: View {
     @Binding var itemId: String
     let completion: (String) -> Void
     @State private var isSearching = false
@@ -449,5 +394,17 @@ struct CloudManualEntryView: View {
                 .disabled(isSearching)
             )
         }
+    }
+}
+
+// Updated CloudItemDetailView stub (you'll need to implement this)
+struct ImprovedCloudItemDetailView: View {
+    let item: CloudItem
+    @StateObject private var dataManager = ImprovedCloudDataManager.shared
+    
+    var body: some View {
+        Text("Item Detail for \(item.name)")
+            .navigationTitle(item.name)
+        // Implement the full detail view here based on your existing CloudItemDetailView
     }
 }
