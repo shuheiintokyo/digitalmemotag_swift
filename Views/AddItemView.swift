@@ -3,11 +3,13 @@ import CoreData
 
 struct AddItemView: View {
     @Environment(\.presentationMode) var presentationMode
-    @EnvironmentObject var itemManager: ItemManager
+    @StateObject private var dataManager = CloudDataManager.shared
     
     @State private var itemName = ""
     @State private var itemLocation = ""
     @State private var showingAlert = false
+    @State private var alertMessage = ""
+    @State private var isCreating = false
     
     var body: some View {
         NavigationView {
@@ -15,9 +17,21 @@ struct AddItemView: View {
                 Section(header: Text("製品情報")) {
                     TextField("製品名", text: $itemName)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .disabled(isCreating)
                     
                     TextField("保管場所（任意）", text: $itemLocation)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .disabled(isCreating)
+                }
+                
+                if isCreating {
+                    Section {
+                        HStack {
+                            ProgressView()
+                            Text("製品を作成中...")
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
                 
                 Section(footer: Text("製品IDは自動で生成されます（例: 20250115-01）")) {
@@ -28,33 +42,49 @@ struct AddItemView: View {
             .navigationBarItems(
                 leading: Button("キャンセル") {
                     presentationMode.wrappedValue.dismiss()
-                },
-                trailing: Button("追加") {
-                    addItem()
                 }
-                .disabled(itemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(isCreating),
+                trailing: Button("追加") {
+                    Task {
+                        await addItem()
+                    }
+                }
+                .disabled(itemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isCreating)
             )
             .alert(isPresented: $showingAlert) {
                 Alert(
-                    title: Text("入力エラー"),
-                    message: Text("製品名を入力してください"),
-                    dismissButton: .default(Text("OK"))
+                    title: Text("作成結果"),
+                    message: Text(alertMessage),
+                    dismissButton: .default(Text("OK")) {
+                        if alertMessage.contains("成功") {
+                            presentationMode.wrappedValue.dismiss()
+                        }
+                    }
                 )
             }
         }
     }
     
-    private func addItem() {
+    private func addItem() async {
         let trimmedName = itemName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedLocation = itemLocation.trimmingCharacters(in: .whitespacesAndNewlines)
         
         if trimmedName.isEmpty {
+            alertMessage = "製品名を入力してください"
             showingAlert = true
             return
         }
         
-        itemManager.createItem(name: trimmedName, location: trimmedLocation)
-        presentationMode.wrappedValue.dismiss()
+        isCreating = true
+        
+        if let newItem = await dataManager.createItem(name: trimmedName, location: trimmedLocation) {
+            alertMessage = "製品「\(newItem.name)」を作成しました（ID: \(newItem.itemId)）"
+            showingAlert = true
+        } else {
+            alertMessage = "製品の作成に失敗しました。ネットワーク接続を確認してください。"
+            showingAlert = true
+        }
+        
+        isCreating = false
     }
 }
-

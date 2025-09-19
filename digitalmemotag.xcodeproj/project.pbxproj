@@ -13,6 +13,7 @@
 		052248242E7CEC4300A2E1BE /* CloudModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248232E7CEC4100A2E1BE /* CloudModels.swift */; };
 		052248272E7CEFF500A2E1BE /* QRCodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248262E7CEFEA00A2E1BE /* QRCodeScannerView.swift */; };
 		052248292E7CF05F00A2E1BE /* CoreData+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248282E7CF05500A2E1BE /* CoreData+Extensions.swift */; };
+		0522482B2E7CF7E500A2E1BE /* ItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522482A2E7CF7DD00A2E1BE /* ItemManager.swift */; };
 		059FEFD82E77AACD008DC185 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD72E77AACD008DC185 /* App.swift */; };
 		059FEFDA2E77AACD008DC185 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD92E77AACD008DC185 /* ContentView.swift */; };
 		059FEFE12E77AACF008DC185 /* digitalmemotag.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFDF2E77AACF008DC185 /* digitalmemotag.xcdatamodeld */; };
@@ -63,6 +64,7 @@
 		052248232E7CEC4100A2E1BE /* CloudModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudModels.swift; sourceTree = "<group>"; };
 		052248262E7CEFEA00A2E1BE /* QRCodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeScannerView.swift; sourceTree = "<group>"; };
 		052248282E7CF05500A2E1BE /* CoreData+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CoreData+Extensions.swift"; sourceTree = "<group>"; };
+		0522482A2E7CF7DD00A2E1BE /* ItemManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemManager.swift; sourceTree = "<group>"; };
 		059FEFD42E77AACD008DC185 /* digitalmemotag.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = digitalmemotag.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		059FEFD72E77AACD008DC185 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		059FEFD92E77AACD008DC185 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -214,6 +216,7 @@
 		059FF05B2E77D2EC008DC185 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				0522482A2E7CF7DD00A2E1BE /* ItemManager.swift */,
 				052248232E7CEC4100A2E1BE /* CloudModels.swift */,
 				059FF0332E77C694008DC185 /* MessageType.swift */,
 				059FF0362E77C720008DC185 /* CloudDataManager.swift */,
@@ -411,6 +414,7 @@
 				059FEFDA2E77AACD008DC185 /* ContentView.swift in Sources */,
 				059FF0352E77C699008DC185 /* MessageType.swift in Sources */,
 				059FF0562E77D189008DC185 /* ManualEntryView.swift in Sources */,
+				0522482B2E7CF7E500A2E1BE /* ItemManager.swift in Sources */,
 				052248242E7CEC4300A2E1BE /* CloudModels.swift in Sources */,
 				059FF0052E77ABB1008DC185 /* CloudDashboardView.swift in Sources */,
 				059FF0442E77D02E008DC185 /* ItemRowView.swift in Sources */,

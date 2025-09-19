@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct CloudDashboardView: View {
-    @StateObject private var dataManager = CloudDataManager(context: PersistenceController.shared.container.viewContext)
+    @StateObject private var dataManager = CloudDataManager.shared
     @State private var showingAddItem = false
     @State private var searchText = ""
     

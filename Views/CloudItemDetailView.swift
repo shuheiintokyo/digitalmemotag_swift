@@ -540,23 +540,23 @@ struct QRScannerView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingItemDetail) {
-            if let item = foundItem {
-                NavigationView {
-                    CloudItemDetailView(item: item)
-                        .navigationBarItems(trailing: Button("閉じる") {
-                            showingItemDetail = false
-                        })
-                }
-            }
-        }
-        .alert(isPresented: $showingAlert) {
-            Alert(
-                title: Text("スキャン結果"),
-                message: Text(alertMessage),
-                dismissButton: .default(Text("OK"))
-            )
-        }
+//        .sheet(isPresented: $showingItemDetail) {
+//            if let item = foundItem {
+//                NavigationView {
+//                    CloudItemDetailView(item: <#T##CloudItem#>, dataManager: <#T##CloudDataManager#>)
+//                        .navigationBarItems(trailing: Button("閉じる") {
+//                            showingItemDetail = false
+//                        })
+//                }
+//            }
+//        }
+//        .alert(isPresented: $showingAlert) {
+//            Alert(
+//                title: Text("スキャン結果"),
+//                message: Text(alertMessage),
+//                dismissButton: .default(Text("OK"))
+//            )
+//        }
     }
     
     private func handleScannedCode(_ code: String) {

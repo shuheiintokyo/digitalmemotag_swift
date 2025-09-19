@@ -1,16 +1,16 @@
 //
-//  ImprovedCloudQRScannerView.swift
+//  CloudQRScannerView.swift
 //  digitalmemotag
 //
-//  Improved QR Scanner with proper camera permissions and singleton data manager
+//  QR Scanner with proper camera permissions and cloud data manager integration
 //
 
 import SwiftUI
 import CoreData
 import AVFoundation
 
-struct ImprovedCloudQRScannerView: View {
-    @StateObject private var dataManager = ImprovedCloudDataManager.shared
+struct CloudQRScannerView: View {
+    @StateObject private var dataManager = CloudDataManager.shared
     @State private var isPresentingScanner = false
     @State private var showingManualEntry = false
     @State private var manualItemId = ""
@@ -145,7 +145,7 @@ struct ImprovedCloudQRScannerView: View {
             }
         }
         .sheet(isPresented: $showingManualEntry) {
-            ImprovedManualEntryView(itemId: $manualItemId) { itemId in
+            ManualEntryView(itemId: $manualItemId) { itemId in
                 showingManualEntry = false
                 if !itemId.isEmpty {
                     handleScannedCode(itemId)
@@ -155,7 +155,7 @@ struct ImprovedCloudQRScannerView: View {
         .sheet(isPresented: $showingItemDetail) {
             if let item = foundItem {
                 NavigationView {
-                    ImprovedCloudItemDetailView(item: item)
+                    CloudItemDetailView(item: item, dataManager: dataManager)
                         .navigationBarItems(trailing: Button("閉じる") {
                             showingItemDetail = false
                             foundItem = nil
@@ -335,76 +335,67 @@ struct ImprovedCloudQRScannerView: View {
 
 // MARK: - Supporting Views
 
-struct ImprovedManualEntryView: View {
-    @Binding var itemId: String
-    let completion: (String) -> Void
-    @State private var isSearching = false
+struct ConnectionStatusHeader: View {
+    @ObservedObject var dataManager: CloudDataManager
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                Text("製品IDを入力してください")
-                    .font(.headline)
-                    .padding()
-                
-                TextField("例: 20250115-01", text: $itemId)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding(.horizontal)
-                    .disabled(isSearching)
-                
-                if isSearching {
-                    HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("検索中...")
-                            .foregroundColor(.secondary)
-                    }
-                    .padding()
-                }
-                
-                Button(action: {
-                    isSearching = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        completion(itemId)
-                        isSearching = false
-                    }
-                }) {
-                    Text(isSearching ? "検索中..." : "検索")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            itemId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching
-                            ? Color.gray
-                            : Color.blue
-                        )
-                        .cornerRadius(12)
-                }
-                .disabled(itemId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching)
-                .padding(.horizontal)
-                
-                Spacer()
+        HStack {
+            Circle()
+                .fill(dataManager.syncStatus.color)
+                .frame(width: 8, height: 8)
+            
+            Text(dataManager.syncStatus.displayText)
+                .font(.caption)
+                .foregroundColor(dataManager.syncStatus.color)
+            
+            Spacer()
+            
+            if dataManager.isLoading {
+                ProgressView()
+                    .scaleEffect(0.8)
             }
-            .navigationTitle("手動入力")
-            .navigationBarItems(
-                trailing: Button("キャンセル") {
-                    completion("")
-                }
-                .disabled(isSearching)
-            )
         }
+        .padding(.horizontal)
+        .padding(.vertical, 4)
+        .background(Color(.systemGray6))
     }
 }
 
-// Updated CloudItemDetailView stub (you'll need to implement this)
-struct ImprovedCloudItemDetailView: View {
+struct RecentItemCard: View {
     let item: CloudItem
-    @StateObject private var dataManager = ImprovedCloudDataManager.shared
+    let onTap: () -> Void
     
     var body: some View {
-        Text("Item Detail for \(item.name)")
-            .navigationTitle(item.name)
-        // Implement the full detail view here based on your existing CloudItemDetailView
+        Button(action: onTap) {
+            VStack(spacing: 8) {
+                HStack {
+                    Circle()
+                        .fill(item.status.color)
+                        .frame(width: 8, height: 8)
+                    
+                    Text(item.name)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                }
+                
+                HStack {
+                    Text(item.itemId)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(width: 120)
+            .background(Color(.systemGray6))
+            .cornerRadius(8)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }

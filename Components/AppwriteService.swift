@@ -1,5 +1,5 @@
 //
-//  ImprovedAppwriteService.swift
+//  AppwriteService.swift
 //  digitalmemotag
 //
 //  Enhanced Appwrite service with better error handling and additional functionality
@@ -8,8 +8,8 @@
 import Appwrite
 import Foundation
 
-class ImprovedAppwriteService: ObservableObject {
-    static let shared = ImprovedAppwriteService()
+class AppwriteService: ObservableObject {
+    static let shared = AppwriteService()
     
     let client = Client()
     let databases: Databases
@@ -422,7 +422,7 @@ enum AppwriteError: Error, LocalizedError {
 
 // MARK: - Health Check Extension
 
-extension ImprovedAppwriteService {
+extension AppwriteService {
     func performHealthCheck() async -> HealthCheckResult {
         var results: [String] = []
         

@@ -1,4 +1,4 @@
-// MARK: - CloudDataManager.swift (Replace existing file with this)
+// MARK: - CloudDataManager.swift (Fixed singleton implementation)
 import Foundation
 import CoreData
 import Appwrite
@@ -242,8 +242,8 @@ class CloudDataManager: ObservableObject {
     
     func deleteItem(_ item: CloudItem) async -> Bool {
         do {
-            // Delete from cloud (you'll need to add this method to AppwriteService)
-            // try await appwriteService.deleteItem(itemId: item.itemId)
+            // Delete from cloud
+            try await appwriteService.deleteItem(itemId: item.itemId)
             
             // Remove from local array
             items.removeAll { $0.id == item.id }
