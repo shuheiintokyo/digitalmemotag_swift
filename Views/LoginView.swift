@@ -88,6 +88,9 @@ struct LoginView: View {
                             
                             SecureField("8文字以上", text: $password)
                                 .textFieldStyle(CustomTextFieldStyle())
+                                .textContentType(.oneTimeCode)  // Add this - prevents password autofill
+                                .autocapitalization(.none)      // Add this
+                                .disableAutocorrection(true)     // Add this
                                 .focused($focusedField, equals: .password)
                                 .submitLabel(isRegistering ? .next : .done)
                                 .onSubmit {
@@ -98,7 +101,8 @@ struct LoginView: View {
                                     }
                                 }
                         }
-                        
+
+                        // Update the Confirm Password field section (around line 107)
                         // Confirm Password field (only for registration)
                         if isRegistering {
                             VStack(alignment: .leading, spacing: 8) {
@@ -108,6 +112,9 @@ struct LoginView: View {
                                 
                                 SecureField("パスワードを再入力", text: $confirmPassword)
                                     .textFieldStyle(CustomTextFieldStyle())
+                                    .textContentType(.oneTimeCode)  // Add this - prevents password autofill
+                                    .autocapitalization(.none)      // Add this
+                                    .disableAutocorrection(true)     // Add this
                                     .focused($focusedField, equals: .confirmPassword)
                                     .submitLabel(.done)
                                     .onSubmit {
