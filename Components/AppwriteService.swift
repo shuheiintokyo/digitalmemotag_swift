@@ -16,7 +16,7 @@ class AppwriteService: ObservableObject {
     
     // PRODUCTION: Use the correct database ID from your Appwrite dashboard
     let databaseId = "68cbba0e00372afe7c23"  // Verify this ID in your Appwrite console
-    let itemsCollectionId = "items"
+    let itemsCollectionId = "Items"
     let messagesCollectionId = "messages"
     
     @Published var isConnected = false
