@@ -1,7 +1,303 @@
-// MARK: - Fixed QRCodeDisplayView.swift
-import SwiftUI
-import UIKit
+//
+//  ItemDetailView.swift
+//  digitalmemotag
+//
+//  Created by Shuhei Kinugasa on 2025/09/15.
+//
 
+// MARK: - ItemDetailView.swift (Message Board)
+import SwiftUI
+import CoreData
+import UIKit
+import AVFoundation
+
+// MARK: - CloudItemDetailView.swift
+struct CloudItemDetailView: View {
+    let item: CloudItem
+    let dataManager: CloudDataManager
+    
+    @State private var newMessage = ""
+    @State private var userName = ""
+    @State private var showingQRCode = false
+    @State private var isAddingMessage = false
+    @State private var showingDeleteAlert = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Item Info Header
+            CloudItemInfoHeader(item: item, showingQRCode: $showingQRCode)
+            
+            // Quick Action Buttons
+            CloudQuickActionButtons(
+                item: item,
+                dataManager: dataManager,
+                isLoading: isAddingMessage
+            )
+            
+            // Message Input
+            CloudMessageInputView(
+                newMessage: $newMessage,
+                userName: $userName,
+                isLoading: isAddingMessage,
+                onSend: {
+                    await sendMessage()
+                }
+            )
+            
+            // Messages List
+            CloudMessagesList(
+                messages: item.messages,
+                isLoading: dataManager.isLoading
+            )
+        }
+        .navigationTitle(item.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarItems(
+            trailing: HStack {
+                Button(action: { showingQRCode = true }) {
+                    Image(systemName: "qrcode")
+                }
+                
+                Button(action: { showingDeleteAlert = true }) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+            }
+        )
+        .sheet(isPresented: $showingQRCode) {
+            CloudQRCodeDisplayView(item: item)
+        }
+        .alert(isPresented: $showingDeleteAlert) {
+            Alert(
+                title: Text("製品を削除"),
+                message: Text("この製品を削除してもよろしいですか？"),
+                primaryButton: .destructive(Text("削除")) {
+                    Task {
+                        if await dataManager.deleteItem(item) {
+                            // Navigate back
+                        }
+                    }
+                },
+                secondaryButton: .cancel(Text("キャンセル"))
+            )
+        }
+        .onAppear {
+            Task {
+                await dataManager.loadMessages(for: item)
+            }
+        }
+    }
+    
+    private func sendMessage() async {
+        guard !newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        isAddingMessage = true
+        
+        let trimmedMessage = newMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedUserName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        let success = await dataManager.addMessage(
+            to: item,
+            message: trimmedMessage,
+            userName: trimmedUserName.isEmpty ? "匿名" : trimmedUserName,
+            type: .general
+        )
+        
+        if success {
+            newMessage = ""
+        }
+        
+        isAddingMessage = false
+    }
+}
+
+// MARK: - ItemInfoHeader.swift
+struct ItemInfoHeader: View {
+    let item: Item
+    @Binding var showingQRCode: Bool
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.name ?? "Unknown")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("ID: \(item.itemId ?? "")")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    if let location = item.location, !location.isEmpty {
+                        Text("場所: \(location)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    HStack {
+                        Circle()
+                            .fill(item.statusEnum.color)
+                            .frame(width: 8, height: 8)
+                        Text(item.statusEnum.localizedString)
+                            .font(.caption)
+                            .foregroundColor(item.statusEnum.color)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(item.statusEnum.color.opacity(0.1))
+                    .cornerRadius(12)
+                    
+                    Button(action: { showingQRCode = true }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "qrcode")
+                            Text("QR表示")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+    }
+}
+
+// MARK: - QuickActionButtons.swift
+struct QuickActionButtons: View {
+    let onAction: (MessageType) -> Void
+    
+    private let quickActions: [MessageType] = [.blue, .green, .yellow, .red]
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("クイックアクション")
+                .font(.headline)
+                .padding(.top)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
+                ForEach(quickActions.indices, id: \.self) { index in
+                    let action = quickActions[index]
+                    Button(action: { onAction(action) }) {
+                        Text(getButtonText(for: action))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(action.color)
+                            .cornerRadius(8)
+                    }
+                }
+            }
+            .padding(.horizontal)
+        }
+        .padding(.bottom)
+        .background(Color(.systemBackground))
+    }
+    
+    // Helper function to get button text for message types
+    private func getButtonText(for messageType: MessageType) -> String {
+        switch messageType {
+        case .general: return ""
+        case .blue: return UserDefaults.standard.string(forKey: "quickActionBlue") ?? "作業を開始しました"
+        case .green: return UserDefaults.standard.string(forKey: "quickActionGreen") ?? "作業を完了しました"
+        case .yellow: return UserDefaults.standard.string(forKey: "quickActionYellow") ?? "作業に遅れが生じています"
+        case .red: return UserDefaults.standard.string(forKey: "quickActionRed") ?? "問題が発生しました。"
+        }
+    }
+}
+
+// MARK: - MessagesList.swift
+struct MessagesList: View {
+    let messages: [Message]
+    let onDelete: (Message) -> Void
+    
+    var body: some View {
+        List {
+            if messages.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "message")
+                        .font(.system(size: 40))
+                        .foregroundColor(.gray)
+                    Text("まだメッセージがありません")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+                .listRowSeparator(.hidden)
+            } else {
+                ForEach(messages.indices, id: \.self) { index in
+                    let message = messages[index]
+                    MessageRowView(message: message, onDelete: onDelete)
+                }
+            }
+        }
+        .listStyle(PlainListStyle())
+    }
+}
+
+// MARK: - MessageRowView.swift
+struct MessageRowView: View {
+    let message: Message
+    let onDelete: (Message) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(message.userName ?? "匿名")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                HStack(spacing: 8) {
+                    if message.messageTypeEnum != .general {
+                        Text("ステータス更新")
+                            .font(.caption2)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(message.messageTypeEnum.color)
+                            .cornerRadius(4)
+                    }
+                    
+                    Text(formatDate(message.createdAt))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Button(action: { onDelete(message) }) {
+                        Image(systemName: "trash")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+            
+            Text(message.message ?? "")
+                .font(.body)
+                .foregroundColor(.primary)
+        }
+        .padding(.vertical, 4)
+    }
+    
+    private func formatDate(_ date: Date?) -> String {
+        guard let date = date else { return "" }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - QRCodeDisplayView.swift
 struct QRCodeDisplayView: View {
     let item: Item
     @Environment(\.presentationMode) var presentationMode
@@ -39,7 +335,6 @@ struct QRCodeDisplayView: View {
                         )
                 }
                 
-                // Show both URL formats for testing
                 VStack(spacing: 8) {
                     Text("QR Contains:")
                         .font(.caption)
@@ -79,7 +374,7 @@ struct QRCodeDisplayView: View {
         }
         .alert(isPresented: $showingAlert) {
             Alert(
-                title: Text("保存完了"),
+                title: Text("保存結果"),
                 message: Text(alertMessage),
                 dismissButton: .default(Text("OK"))
             )
@@ -102,7 +397,6 @@ struct QRCodeDisplayView: View {
         
         guard let qrCodeCIImage = filter.outputImage else { return }
         
-        // Scale up the image
         let scaleX = 200 / qrCodeCIImage.extent.size.width
         let scaleY = 200 / qrCodeCIImage.extent.size.height
         let transformedImage = qrCodeCIImage.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
@@ -120,24 +414,23 @@ struct QRCodeDisplayView: View {
             return
         }
         
-        UIImageWriteToSavedPhotosAlbum(image, self, #selector(image(_:didFinishSavingWithError:contextInfo:)), nil)
-    }
-    
-    @objc func image(_ image: UIImage, didFinishSavingWithError error: Error?, contextInfo: UnsafeRawPointer) {
-        if let error = error {
-            alertMessage = "保存に失敗しました: \(error.localizedDescription)"
-        } else {
-            alertMessage = "QRコードを写真に保存しました"
+        let saver = ImageSaver()
+        saver.writeToPhotoAlbum(image: image) { success, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    self.alertMessage = "保存に失敗しました: \(error.localizedDescription)"
+                } else if success {
+                    self.alertMessage = "QRコードを写真に保存しました"
+                } else {
+                    self.alertMessage = "保存がキャンセルされました"
+                }
+                self.showingAlert = true
+            }
         }
-        showingAlert = true
     }
 }
 
-// MARK: - Fixed QRScannerView.swift
-import SwiftUI
-import CoreData
-import AVFoundation
-
+// MARK: - QRScannerView.swift
 struct QRScannerView: View {
     @State private var isPresentingScanner = false
     @State private var scannedItemId: String?
@@ -250,7 +543,7 @@ struct QRScannerView: View {
         .sheet(isPresented: $showingItemDetail) {
             if let item = foundItem {
                 NavigationView {
-                    ItemDetailView(item: item)
+                    CloudItemDetailView(item: item)
                         .navigationBarItems(trailing: Button("閉じる") {
                             showingItemDetail = false
                         })
@@ -269,7 +562,6 @@ struct QRScannerView: View {
     private func handleScannedCode(_ code: String) {
         print("📱 Scanned code: \(code)")
         
-        // Extract item ID from code
         let itemId = extractItemId(from: code)
         print("🔍 Extracted item ID: \(itemId)")
         
@@ -279,26 +571,24 @@ struct QRScannerView: View {
     }
     
     private func extractItemId(from code: String) -> String {
-        // FIXED: Handle multiple URL formats
         print("🔍 Processing code: \(code)")
         
-        // Try URL parsing first
         if let url = URL(string: code),
            let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
             
-            // Check for item_id parameter
+            // Check for item_id parameter (NEW FORMAT)
             if let itemParam = components.queryItems?.first(where: { $0.name == "item_id" })?.value {
                 print("✅ Found item_id parameter: \(itemParam)")
                 return itemParam
             }
             
-            // Check for item parameter (legacy)
+            // Check for item parameter (LEGACY)
             if let itemParam = components.queryItems?.first(where: { $0.name == "item" })?.value {
                 print("✅ Found item parameter: \(itemParam)")
                 return itemParam
             }
             
-            // Check if it's the old format: digitalmemotag://product/ITEM_ID
+            // Check legacy format: digitalmemotag://product/ITEM_ID
             if url.scheme == "digitalmemotag" && url.host == "product" {
                 let itemId = url.path.replacingOccurrences(of: "/", with: "")
                 if !itemId.isEmpty {
@@ -308,14 +598,12 @@ struct QRScannerView: View {
             }
         }
         
-        // If not a URL, assume it's the item ID directly
         let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
         print("✅ Using code as item ID: \(trimmedCode)")
         return trimmedCode
     }
     
     private func processScannedItem(itemId: String) async {
-        // First check Core Data
         let context = PersistenceController.shared.container.viewContext
         let request: NSFetchRequest<Item> = Item.fetchRequest()
         request.predicate = NSPredicate(format: "itemId == %@", itemId)
@@ -323,7 +611,6 @@ struct QRScannerView: View {
         do {
             let items = try context.fetch(request)
             if let item = items.first {
-                // Found in Core Data
                 await MainActor.run {
                     foundItem = item
                     item.markAsViewed()
@@ -334,11 +621,9 @@ struct QRScannerView: View {
                 return
             }
             
-            // Not in Core Data, check Appwrite
             print("🌐 Item not in Core Data, checking Appwrite...")
             
-            if let appwriteItemData = try? await appwriteService.getItem(itemId: itemId) {
-                // Found in Appwrite, create local copy
+            if let appwriteItemData = try? await AppwriteService.shared.getItem(itemId: itemId) {
                 await MainActor.run {
                     let newItem = Item(context: context)
                     newItem.id = UUID()
@@ -361,9 +646,8 @@ struct QRScannerView: View {
                     }
                 }
             } else {
-                // Not found anywhere
                 await MainActor.run {
-                    alertMessage = "製品ID「\(itemId)」が見つかりません。\n\nローカルデータベースとAppwriteの両方で検索しましたが、該当する製品が存在しませんでした。"
+                    alertMessage = "製品ID「\(itemId)」が見つかりません。"
                     showingAlert = true
                     print("❌ Item not found: \(itemId)")
                 }

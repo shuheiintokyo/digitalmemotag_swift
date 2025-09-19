@@ -8,7 +8,7 @@ class AppwriteService: ObservableObject {
     let databases: Databases
     
     // FIXED: Use the correct database ID from your Appwrite dashboard
-    let databaseId = "68cba0e00372afe7c23"  // Updated to match your dashboard
+    let databaseId = "68cba0e00372afe7c23"
     let itemsCollectionId = "items"
     let messagesCollectionId = "messages"
     
@@ -18,7 +18,7 @@ class AppwriteService: ObservableObject {
     private init() {
         client
             .setEndpoint("https://sfo.cloud.appwrite.io/v1")
-            .setProject("68cba284000aabe9c076")  // Your project ID
+            .setProject("68cba284000aabe9c076")
         
         databases = Databases(client)
         
@@ -31,7 +31,12 @@ class AppwriteService: ObservableObject {
     // MARK: - Connection Testing
     func testConnection() async {
         do {
-            _ = try await databases.get(databaseId: databaseId)
+            // FIXED: Use listDocuments instead of databases.get() which doesn't exist
+            _ = try await databases.listDocuments(
+                databaseId: databaseId,
+                collectionId: itemsCollectionId,
+                queries: [Query.limit(1)]
+            )
             await MainActor.run {
                 self.isConnected = true
                 self.lastError = nil
@@ -175,6 +180,35 @@ class AppwriteService: ObservableObject {
                 location: item.location ?? "",
                 status: item.status ?? "Working"
             )
+        }
+    }
+    
+    // MARK: - Basic Database Test (for debugging)
+    func testDatabaseAccess() async -> Bool {
+        do {
+            _ = try await databases.listDocuments(
+                databaseId: databaseId,
+                collectionId: itemsCollectionId,
+                queries: [Query.limit(1)]
+            )
+            return true
+        } catch {
+            print("❌ Database access test failed: \(error)")
+            return false
+        }
+    }
+    
+    func testCollectionAccess(collectionId: String) async -> Bool {
+        do {
+            _ = try await databases.listDocuments(
+                databaseId: databaseId,
+                collectionId: collectionId,
+                queries: [Query.limit(1)]
+            )
+            return true
+        } catch {
+            print("❌ Collection access test failed for \(collectionId): \(error)")
+            return false
         }
     }
 }

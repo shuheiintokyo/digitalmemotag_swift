@@ -9,12 +9,13 @@
 /* Begin PBXBuildFile section */
 		052248162E7BF05A00A2E1BE /* Appwrite in Frameworks */ = {isa = PBXBuildFile; productRef = 052248152E7BF05A00A2E1BE /* Appwrite */; };
 		0522481E2E7CD5BB00A2E1BE /* DebugConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522481D2E7CD5B900A2E1BE /* DebugConnectionView.swift */; };
-		052248202E7CD6ED00A2E1BE /* QRCodeDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522481F2E7CD6EC00A2E1BE /* QRCodeDisplayView.swift */; };
+		052248222E7CD8ED00A2E1BE /* ImageSaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248212E7CD8D400A2E1BE /* ImageSaver.swift */; };
+		052248242E7CEC4300A2E1BE /* CloudModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052248232E7CEC4100A2E1BE /* CloudModels.swift */; };
 		059FEFD82E77AACD008DC185 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD72E77AACD008DC185 /* App.swift */; };
 		059FEFDA2E77AACD008DC185 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFD92E77AACD008DC185 /* ContentView.swift */; };
 		059FEFE12E77AACF008DC185 /* digitalmemotag.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 059FEFDF2E77AACF008DC185 /* digitalmemotag.xcdatamodeld */; };
-		059FF0052E77ABB1008DC185 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0032E77ABA7008DC185 /* DashboardView.swift */; };
-		059FF0082E77ABDB008DC185 /* ItemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0062E77ABD5008DC185 /* ItemDetailView.swift */; };
+		059FF0052E77ABB1008DC185 /* CloudDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0032E77ABA7008DC185 /* CloudDashboardView.swift */; };
+		059FF0082E77ABDB008DC185 /* CloudItemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0062E77ABD5008DC185 /* CloudItemDetailView.swift */; };
 		059FF00D2E77B685008DC185 /* Date+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF00B2E77B682008DC185 /* Date+Extensions.swift */; };
 		059FF0102E77B6B0008DC185 /* String+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF00E2E77B6A6008DC185 /* String+Extensions.swift */; };
 		059FF0132E77B6CF008DC185 /* View+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0112E77B6CD008DC185 /* View+Extensions.swift */; };
@@ -24,15 +25,14 @@
 		059FF02F2E77C59F008DC185 /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF02D2E77C594008DC185 /* PersistenceController.swift */; };
 		059FF0322E77C648008DC185 /* ItemStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0302E77C645008DC185 /* ItemStatus.swift */; };
 		059FF0352E77C699008DC185 /* MessageType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0332E77C694008DC185 /* MessageType.swift */; };
-		059FF0382E77C726008DC185 /* ItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0362E77C720008DC185 /* ItemManager.swift */; };
+		059FF0382E77C726008DC185 /* CloudDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0362E77C720008DC185 /* CloudDataManager.swift */; };
 		059FF03C2E77C813008DC185 /* CoreData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 059FF03A2E77C804008DC185 /* CoreData.framework */; };
 		059FF0412E77CFBA008DC185 /* MessageInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF03F2E77CFB8008DC185 /* MessageInputView.swift */; };
 		059FF0442E77D02E008DC185 /* ItemRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0422E77D02C008DC185 /* ItemRowView.swift */; };
 		059FF0472E77D05B008DC185 /* ItemSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0452E77D058008DC185 /* ItemSearchField.swift */; };
 		059FF04A2E77D0C8008DC185 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0482E77D0C6008DC185 /* EmptyStateView.swift */; };
 		059FF04D2E77D100008DC185 /* AddItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF04B2E77D0FF008DC185 /* AddItemView.swift */; };
-		059FF0502E77D122008DC185 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF04E2E77D121008DC185 /* QRScannerView.swift */; };
-		059FF0532E77D155008DC185 /* QRCodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0512E77D153008DC185 /* QRCodeScannerView.swift */; };
+		059FF0532E77D155008DC185 /* CloudQRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0512E77D153008DC185 /* CloudQRScannerView.swift */; };
 		059FF0562E77D189008DC185 /* ManualEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0542E77D188008DC185 /* ManualEntryView.swift */; };
 		059FF0642E7B99E9008DC185 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0632E7B99E1008DC185 /* SettingsView.swift */; };
 		059FF06A2E7BDFC3008DC185 /* AppwriteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059FF0692E7BDFBF008DC185 /* AppwriteService.swift */; };
@@ -57,15 +57,16 @@
 
 /* Begin PBXFileReference section */
 		0522481D2E7CD5B900A2E1BE /* DebugConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugConnectionView.swift; sourceTree = "<group>"; };
-		0522481F2E7CD6EC00A2E1BE /* QRCodeDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeDisplayView.swift; sourceTree = "<group>"; };
+		052248212E7CD8D400A2E1BE /* ImageSaver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSaver.swift; sourceTree = "<group>"; };
+		052248232E7CEC4100A2E1BE /* CloudModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudModels.swift; sourceTree = "<group>"; };
 		059FEFD42E77AACD008DC185 /* digitalmemotag.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = digitalmemotag.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		059FEFD72E77AACD008DC185 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		059FEFD92E77AACD008DC185 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		059FEFE02E77AACF008DC185 /* digitalmemotag.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = digitalmemotag.xcdatamodel; sourceTree = "<group>"; };
 		059FEFE62E77AACF008DC185 /* digitalmemotagTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = digitalmemotagTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		059FEFF02E77AACF008DC185 /* digitalmemotagUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = digitalmemotagUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		059FF0032E77ABA7008DC185 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
-		059FF0062E77ABD5008DC185 /* ItemDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemDetailView.swift; sourceTree = "<group>"; };
+		059FF0032E77ABA7008DC185 /* CloudDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudDashboardView.swift; sourceTree = "<group>"; };
+		059FF0062E77ABD5008DC185 /* CloudItemDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudItemDetailView.swift; sourceTree = "<group>"; };
 		059FF00B2E77B682008DC185 /* Date+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Extensions.swift"; sourceTree = "<group>"; };
 		059FF00E2E77B6A6008DC185 /* String+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Extensions.swift"; sourceTree = "<group>"; };
 		059FF0112E77B6CD008DC185 /* View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Extensions.swift"; sourceTree = "<group>"; };
@@ -75,15 +76,14 @@
 		059FF02D2E77C594008DC185 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		059FF0302E77C645008DC185 /* ItemStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemStatus.swift; sourceTree = "<group>"; };
 		059FF0332E77C694008DC185 /* MessageType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageType.swift; sourceTree = "<group>"; };
-		059FF0362E77C720008DC185 /* ItemManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemManager.swift; sourceTree = "<group>"; };
+		059FF0362E77C720008DC185 /* CloudDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudDataManager.swift; sourceTree = "<group>"; };
 		059FF03A2E77C804008DC185 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		059FF03F2E77CFB8008DC185 /* MessageInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageInputView.swift; sourceTree = "<group>"; };
 		059FF0422E77D02C008DC185 /* ItemRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemRowView.swift; sourceTree = "<group>"; };
 		059FF0452E77D058008DC185 /* ItemSearchField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemSearchField.swift; sourceTree = "<group>"; };
 		059FF0482E77D0C6008DC185 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		059FF04B2E77D0FF008DC185 /* AddItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemView.swift; sourceTree = "<group>"; };
-		059FF04E2E77D121008DC185 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
-		059FF0512E77D153008DC185 /* QRCodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeScannerView.swift; sourceTree = "<group>"; };
+		059FF0512E77D153008DC185 /* CloudQRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudQRScannerView.swift; sourceTree = "<group>"; };
 		059FF0542E77D188008DC185 /* ManualEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualEntryView.swift; sourceTree = "<group>"; };
 		059FF0632E7B99E1008DC185 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		059FF0692E7BDFBF008DC185 /* AppwriteService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppwriteService.swift; sourceTree = "<group>"; };
@@ -183,12 +183,11 @@
 		059FF0592E77D2DE008DC185 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				0522481F2E7CD6EC00A2E1BE /* QRCodeDisplayView.swift */,
 				0522481D2E7CD5B900A2E1BE /* DebugConnectionView.swift */,
 				059FF0632E7B99E1008DC185 /* SettingsView.swift */,
-				059FF0032E77ABA7008DC185 /* DashboardView.swift */,
-				059FF0062E77ABD5008DC185 /* ItemDetailView.swift */,
+				059FF0062E77ABD5008DC185 /* CloudItemDetailView.swift */,
 				059FF04B2E77D0FF008DC185 /* AddItemView.swift */,
+				059FF0032E77ABA7008DC185 /* CloudDashboardView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -198,12 +197,11 @@
 			children = (
 				059FF0692E7BDFBF008DC185 /* AppwriteService.swift */,
 				059FF0542E77D188008DC185 /* ManualEntryView.swift */,
-				059FF04E2E77D121008DC185 /* QRScannerView.swift */,
 				059FF03F2E77CFB8008DC185 /* MessageInputView.swift */,
 				059FF0482E77D0C6008DC185 /* EmptyStateView.swift */,
 				059FF0422E77D02C008DC185 /* ItemRowView.swift */,
 				059FF0452E77D058008DC185 /* ItemSearchField.swift */,
-				059FF0512E77D153008DC185 /* QRCodeScannerView.swift */,
+				059FF0512E77D153008DC185 /* CloudQRScannerView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -211,8 +209,9 @@
 		059FF05B2E77D2EC008DC185 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				052248232E7CEC4100A2E1BE /* CloudModels.swift */,
 				059FF0332E77C694008DC185 /* MessageType.swift */,
-				059FF0362E77C720008DC185 /* ItemManager.swift */,
+				059FF0362E77C720008DC185 /* CloudDataManager.swift */,
 				059FF0302E77C645008DC185 /* ItemStatus.swift */,
 			);
 			path = Models;
@@ -241,6 +240,7 @@
 		059FF05E2E77D306008DC185 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				052248212E7CD8D400A2E1BE /* ImageSaver.swift */,
 				059FF0172E77B70F008DC185 /* ErrorHandling.swift */,
 				059FF01A2E77B72B008DC185 /* Constants.swift */,
 			);
@@ -389,8 +389,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				059FF0082E77ABDB008DC185 /* ItemDetailView.swift in Sources */,
-				059FF0382E77C726008DC185 /* ItemManager.swift in Sources */,
+				059FF0082E77ABDB008DC185 /* CloudItemDetailView.swift in Sources */,
+				059FF0382E77C726008DC185 /* CloudDataManager.swift in Sources */,
 				059FF0412E77CFBA008DC185 /* MessageInputView.swift in Sources */,
 				059FF01C2E77B72D008DC185 /* Constants.swift in Sources */,
 				059FF0162E77B6F1008DC185 /* UserDefaults+Extensions.swift in Sources */,
@@ -400,19 +400,19 @@
 				059FF04A2E77D0C8008DC185 /* EmptyStateView.swift in Sources */,
 				059FF0642E7B99E9008DC185 /* SettingsView.swift in Sources */,
 				0522481E2E7CD5BB00A2E1BE /* DebugConnectionView.swift in Sources */,
-				059FF0502E77D122008DC185 /* QRScannerView.swift in Sources */,
 				059FF0102E77B6B0008DC185 /* String+Extensions.swift in Sources */,
+				052248222E7CD8ED00A2E1BE /* ImageSaver.swift in Sources */,
 				059FEFDA2E77AACD008DC185 /* ContentView.swift in Sources */,
 				059FF0352E77C699008DC185 /* MessageType.swift in Sources */,
 				059FF0562E77D189008DC185 /* ManualEntryView.swift in Sources */,
-				059FF0052E77ABB1008DC185 /* DashboardView.swift in Sources */,
+				052248242E7CEC4300A2E1BE /* CloudModels.swift in Sources */,
+				059FF0052E77ABB1008DC185 /* CloudDashboardView.swift in Sources */,
 				059FF0442E77D02E008DC185 /* ItemRowView.swift in Sources */,
 				059FEFD82E77AACD008DC185 /* App.swift in Sources */,
 				059FEFE12E77AACF008DC185 /* digitalmemotag.xcdatamodeld in Sources */,
 				059FF0472E77D05B008DC185 /* ItemSearchField.swift in Sources */,
-				059FF0532E77D155008DC185 /* QRCodeScannerView.swift in Sources */,
+				059FF0532E77D155008DC185 /* CloudQRScannerView.swift in Sources */,
 				059FF0192E77B717008DC185 /* ErrorHandling.swift in Sources */,
-				052248202E7CD6ED00A2E1BE /* QRCodeDisplayView.swift in Sources */,
 				059FF0132E77B6CF008DC185 /* View+Extensions.swift in Sources */,
 				059FF06A2E7BDFC3008DC185 /* AppwriteService.swift in Sources */,
 				059FF00D2E77B685008DC185 /* Date+Extensions.swift in Sources */,

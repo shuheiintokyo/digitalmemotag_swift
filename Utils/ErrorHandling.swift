@@ -5,6 +5,7 @@ enum AppError: Error, LocalizedError {
     case qrCodeGenerationFailed
     case cameraNotAvailable
     case itemNotFound
+    case appwriteConnectionFailed  // Added this new case
     
     var errorDescription: String? {
         switch self {
@@ -16,6 +17,8 @@ enum AppError: Error, LocalizedError {
             return "カメラが利用できません"
         case .itemNotFound:
             return "製品が見つかりません"
+        case .appwriteConnectionFailed:  // Added this case
+            return "Appwriteサーバーに接続できません"
         }
     }
 }
