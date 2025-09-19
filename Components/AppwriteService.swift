@@ -15,9 +15,9 @@ class AppwriteService: ObservableObject {
     let databases: Databases
     
     // PRODUCTION: Use the correct database ID from your Appwrite dashboard
-    let databaseId = "68cbba0e00372afe7c23"  // Verify this ID in your Appwrite console
-    let itemsCollectionId = "Items"
-    let messagesCollectionId = "messages"
+    let databaseId = "68cbba0e00372afe7c23"  // Fixed: with double 'b'
+    let itemsCollectionId = "Items"  // Capital 'I'
+    let messagesCollectionId = "messages"  // lowercase 'm'
     
     @Published var isConnected = false
     @Published var lastError: String?
@@ -42,7 +42,7 @@ class AppwriteService: ObservableObject {
     private init() {
         client
             .setEndpoint("https://sfo.cloud.appwrite.io/v1")
-            .setProject("68cba284000aabe9c076")  // Verify this project ID
+            .setProject("68cba284000aabe9c076")
         
         databases = Databases(client)
         
@@ -93,6 +93,8 @@ class AppwriteService: ObservableObject {
             "status": status
         ]
         
+        print("📝 Creating item with data: \(data)")
+        
         do {
             let document = try await databases.createDocument(
                 databaseId: databaseId,
@@ -101,7 +103,7 @@ class AppwriteService: ObservableObject {
                 data: data
             )
             
-            print("✅ Created item in Appwrite: \(itemId)")
+            print("✅ Created item in Appwrite with document ID: \(document.id)")
             return document.id
             
         } catch {
@@ -140,21 +142,33 @@ class AppwriteService: ObservableObject {
             throw AppwriteError.notConnected
         }
         
+        print("🔍 Fetching items from collection: '\(itemsCollectionId)' in database: '\(databaseId)'")
+        
         do {
             let response = try await databases.listDocuments(
                 databaseId: databaseId,
                 collectionId: itemsCollectionId,
                 queries: [
                     Query.orderDesc("$createdAt"),
-                    Query.limit(100)  // Limit to prevent large responses
+                    Query.limit(100)
                 ]
             )
+            
+            print("📊 Got \(response.documents.count) documents from Appwrite")
+            
+            // Log the first document to see its structure
+            if let firstDoc = response.documents.first {
+                print("📄 First document structure:")
+                for (key, value) in firstDoc.data {
+                    print("   \(key): \(value)")
+                }
+            }
             
             return response.documents.map { $0.data }
             
         } catch {
             let errorMessage = parseAppwriteError(error)
-            print("❌ Failed to get all items: \(errorMessage)")
+            print("❌ getAllItems error: \(error)")
             throw AppwriteError.operationFailed(errorMessage)
         }
     }
@@ -254,7 +268,7 @@ class AppwriteService: ObservableObject {
                 queries: [
                     Query.equal("item_id", value: itemId),
                     Query.orderDesc("$createdAt"),
-                    Query.limit(50)  // Limit to recent messages
+                    Query.limit(50)
                 ]
             )
             

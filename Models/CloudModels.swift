@@ -21,20 +21,35 @@ struct CloudItem: Identifiable, Hashable {
     
     // MARK: - Appwrite Conversion
     static func from(appwriteData: [String: Any]) -> CloudItem? {
-        guard let id = appwriteData["$id"] as? String,
-              let itemId = appwriteData["item_id"] as? String,
-              let name = appwriteData["name"] as? String else {
-            print("❌ Failed to parse CloudItem: missing required fields")
+        print("🔍 Parsing item data: \(appwriteData)")
+        
+        // Get the document ID
+        guard let id = appwriteData["$id"] as? String else {
+            print("❌ No $id field found")
             return nil
         }
         
+        // Get item_id - this is required
+        guard let itemId = appwriteData["item_id"] as? String, !itemId.isEmpty else {
+            print("❌ No item_id field or empty")
+            return nil
+        }
+        
+        // Get name - make it more lenient
+        let name = appwriteData["name"] as? String ?? "Unnamed"
+        
+        // Get location - optional
         let location = appwriteData["location"] as? String ?? ""
+        
+        // Get status
         let statusString = appwriteData["status"] as? String ?? "Working"
         let status = ItemStatus(rawValue: statusString) ?? .working
         
-        // Parse Appwrite dates (ISO 8601 format)
+        // Parse dates
         let createdAt = parseAppwriteDate(appwriteData["$createdAt"] as? String) ?? Date()
         let updatedAt = parseAppwriteDate(appwriteData["$updatedAt"] as? String) ?? Date()
+        
+        print("✅ Successfully parsed item: id=\(id), itemId=\(itemId), name=\(name)")
         
         return CloudItem(
             id: id,
@@ -59,8 +74,6 @@ struct CloudItem: Identifiable, Hashable {
     
     // MARK: - Helper Properties
     var hasNewMessages: Bool {
-        // In cloud-first, this could be based on last sync time
-        // For now, simplified to check if there are any messages
         return !messages.isEmpty
     }
     
@@ -84,13 +97,20 @@ struct CloudMessage: Identifiable, Hashable {
     
     // MARK: - Appwrite Conversion
     static func from(appwriteData: [String: Any]) -> CloudMessage? {
-        guard let id = appwriteData["$id"] as? String,
-              let itemId = appwriteData["item_id"] as? String,
-              let message = appwriteData["message"] as? String,
-              let userName = appwriteData["user_name"] as? String else {
-            print("❌ Failed to parse CloudMessage: missing required fields")
+        print("🔍 Parsing message data")
+        
+        guard let id = appwriteData["$id"] as? String else {
+            print("❌ No $id field in message")
             return nil
         }
+        
+        guard let itemId = appwriteData["item_id"] as? String, !itemId.isEmpty else {
+            print("❌ No item_id field in message")
+            return nil
+        }
+        
+        let message = appwriteData["message"] as? String ?? ""
+        let userName = appwriteData["user_name"] as? String ?? "匿名"
         
         let msgTypeString = appwriteData["msg_type"] as? String ?? "general"
         let messageType = MessageType(rawValue: msgTypeString) ?? .general
@@ -310,8 +330,8 @@ extension CloudItem {
         name: "サンプル製品",
         location: "倉庫A",
         status: .working,
-        createdAt: Date().addingTimeInterval(-3600), // 1 hour ago
-        updatedAt: Date().addingTimeInterval(-1800), // 30 minutes ago
+        createdAt: Date().addingTimeInterval(-3600),
+        updatedAt: Date().addingTimeInterval(-1800),
         messages: [CloudMessage.preview1, CloudMessage.preview2]
     )
     
@@ -321,8 +341,8 @@ extension CloudItem {
         name: "完了済み製品",
         location: "倉庫B",
         status: .completed,
-        createdAt: Date().addingTimeInterval(-7200), // 2 hours ago
-        updatedAt: Date().addingTimeInterval(-3600), // 1 hour ago
+        createdAt: Date().addingTimeInterval(-7200),
+        updatedAt: Date().addingTimeInterval(-3600),
         messages: []
     )
 }
@@ -334,7 +354,7 @@ extension CloudMessage {
         message: "作業を開始しました",
         userName: "田中",
         messageType: .blue,
-        createdAt: Date().addingTimeInterval(-1800) // 30 minutes ago
+        createdAt: Date().addingTimeInterval(-1800)
     )
     
     static let preview2 = CloudMessage(
@@ -343,7 +363,7 @@ extension CloudMessage {
         message: "順調に進んでいます",
         userName: "山田",
         messageType: .general,
-        createdAt: Date().addingTimeInterval(-900) // 15 minutes ago
+        createdAt: Date().addingTimeInterval(-900)
     )
 }
 #endif
