@@ -1,14 +1,8 @@
-//
-//  ContentView.swift
-//  digitalmemotag
-//
-//  Main app navigation with cloud-first architecture
-//
-
 import SwiftUI
 
 struct ContentView: View {
     @State private var selectedTab = 0
+    @StateObject private var dataManager = CloudDataManager.shared
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -37,6 +31,11 @@ struct ContentView: View {
         .onAppear {
             // Configure tab bar appearance
             configureTabBarAppearance()
+            
+            // Initialize data manager if not already done
+            Task {
+                await dataManager.initialize()
+            }
         }
     }
     
@@ -64,8 +63,6 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Preview
-
 #if DEBUG
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
@@ -74,3 +71,4 @@ struct ContentView_Previews: PreviewProvider {
     }
 }
 #endif
+

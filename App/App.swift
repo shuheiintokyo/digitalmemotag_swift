@@ -1,3 +1,4 @@
+// MARK: - Fixed App.swift
 import SwiftUI
 
 @main
@@ -13,6 +14,10 @@ struct digitalmemotagApp: App {
                         .environment(\.managedObjectContext, persistenceController.container.viewContext)
                         .onOpenURL { url in
                             handleIncomingURL(url)
+                        }
+                        .task {
+                            // Initialize CloudDataManager after authentication
+                            await CloudDataManager.shared.initialize()
                         }
                 } else {
                     LoginView()
@@ -44,3 +49,4 @@ struct digitalmemotagApp: App {
         }
     }
 }
+

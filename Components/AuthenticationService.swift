@@ -16,7 +16,6 @@ class AuthenticationService: ObservableObject {
     
     private let client: Client
     private let account: Account
-    private let databases: Databases
     
     @Published var isAuthenticated = false
     @Published var currentUser: User<[String: AnyCodable]>?
@@ -30,7 +29,6 @@ class AuthenticationService: ObservableObject {
             .setProject("68cba284000aabe9c076")
         
         self.account = Account(client)
-        self.databases = Databases(client)
         
         // Check for existing session on init
         Task {
@@ -63,6 +61,7 @@ class AuthenticationService: ObservableObject {
             self.currentSession = session
             self.isAuthenticated = true
             
+            // Update AppwriteService with authenticated client
             AppwriteService.shared.updateClient(self.client)
             
             print("✅ User registered and logged in: \(email)")
@@ -95,6 +94,9 @@ class AuthenticationService: ObservableObject {
             self.currentSession = session
             self.currentUser = user
             self.isAuthenticated = true
+            
+            // Update AppwriteService with authenticated client
+            AppwriteService.shared.updateClient(self.client)
             
             print("✅ User logged in: \(email)")
             
@@ -142,6 +144,7 @@ class AuthenticationService: ObservableObject {
                 self.currentUser = user
                 self.isAuthenticated = true
                 
+                // Update AppwriteService with authenticated client
                 AppwriteService.shared.updateClient(self.client)
             }
             
@@ -149,9 +152,11 @@ class AuthenticationService: ObservableObject {
             
         } catch {
             // No valid session
-            self.isAuthenticated = false
-            self.currentUser = nil
-            self.currentSession = nil
+            await MainActor.run {
+                self.isAuthenticated = false
+                self.currentUser = nil
+                self.currentSession = nil
+            }
             
             print("ℹ️ No existing session found")
         }

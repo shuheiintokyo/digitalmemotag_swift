@@ -1,4 +1,4 @@
-// MARK: - CloudDataManager.swift (Fixed singleton implementation)
+// MARK: - CloudDataManager.swift (Fixed implementation)
 import Foundation
 import CoreData
 import Appwrite
@@ -22,68 +22,100 @@ class CloudDataManager: ObservableObject {
     private let viewContext: NSManagedObjectContext
     private var refreshTimer: Timer?
     private var isSyncing = false
+    private var hasInitialLoad = false
     
     // MARK: - Initialization
     private init() {
         self.viewContext = PersistenceController.shared.container.viewContext
         
-        // Initial load
-        Task {
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            await loadItems()
-            startPeriodicRefresh()
-        }
+        // Don't auto-load data on init - wait for explicit call
+        print("🏗️ CloudDataManager initialized")
     }
     
     // MARK: - Public Interface
     
+    func initialize() async {
+        guard !hasInitialLoad else { return }
+        hasInitialLoad = true
+        
+        print("🚀 CloudDataManager starting initial load")
+        await loadItems()
+        startPeriodicRefresh()
+    }
+    
     func loadItems() async {
-        guard !isSyncing else { return }
+        guard !isSyncing else {
+            print("⏳ Already syncing, skipping load request")
+            return
+        }
         
         isSyncing = true
         isLoading = true
         syncStatus = .syncing
         
+        print("🔄 Starting data load from Appwrite...")
+        
         do {
-            // 1. Try to load from cloud first
-            let cloudItemsData = try await appwriteService.getAllItems()
+            // 1. Test connection first
+            await appwriteService.testConnection()
             
-            // 2. Convert to CloudItem objects and load messages
+            if !appwriteService.isConnected {
+                throw AppwriteError.notConnected
+            }
+            
+            // 2. Try to load from cloud
+            let cloudItemsData = try await appwriteService.getAllItems()
+            print("📦 Retrieved \(cloudItemsData.count) items from Appwrite")
+            
+            // 3. Convert to CloudItem objects and load messages
             var cloudItems: [CloudItem] = []
             
-            for itemData in cloudItemsData {
+            for (index, itemData) in cloudItemsData.enumerated() {
+                print("🔄 Processing item \(index + 1)/\(cloudItemsData.count)")
+                
                 if var cloudItem = CloudItem.from(appwriteData: itemData) {
                     // Load messages for this item
-                    let messagesData = try await appwriteService.getMessages(for: cloudItem.itemId)
-                    let messages = messagesData.compactMap { data in
-                        CloudMessage.from(appwriteData: data)
-                    }.sorted { $0.createdAt > $1.createdAt }
-                    
-                    cloudItem.messages = messages
-                    cloudItems.append(cloudItem)
+                    do {
+                        let messagesData = try await appwriteService.getMessages(for: cloudItem.itemId)
+                        let messages = messagesData.compactMap { data in
+                            CloudMessage.from(appwriteData: data)
+                        }.sorted { $0.createdAt > $1.createdAt }
+                        
+                        cloudItem.messages = messages
+                        cloudItems.append(cloudItem)
+                        print("✅ Loaded item: \(cloudItem.name) with \(messages.count) messages")
+                    } catch {
+                        print("⚠️ Failed to load messages for item \(cloudItem.itemId): \(error)")
+                        // Still add the item without messages
+                        cloudItems.append(cloudItem)
+                    }
+                } else {
+                    print("❌ Failed to parse item data: \(itemData)")
                 }
             }
             
-            // 3. Update local cache
+            // 4. Update local cache
             await updateLocalCache(with: cloudItems)
             
-            // 4. Update UI
+            // 5. Update UI
             items = cloudItems.sorted { $0.createdAt > $1.createdAt }
             isOnline = true
             syncStatus = .success
             lastError = nil
             lastSyncTime = Date()
             
-            print("✅ Loaded \(cloudItems.count) items from cloud")
+            print("✅ Successfully loaded \(cloudItems.count) items from cloud")
             
         } catch {
+            print("❌ Failed to load from cloud: \(error)")
+            
             // Fallback to local cache if cloud fails
             await loadFromLocalCache()
             isOnline = false
             syncStatus = .offline
             lastError = error.localizedDescription
             
-            print("⚠️ Failed to load from cloud, using local cache: \(error)")
+            print("📱 Fallback: Using local cache with \(items.count) items")
         }
         
         isLoading = false
@@ -91,7 +123,10 @@ class CloudDataManager: ObservableObject {
     }
     
     func createItem(name: String, location: String) async -> CloudItem? {
-        guard !isSyncing else { return nil }
+        guard !isSyncing else {
+            print("⏳ Currently syncing, cannot create item")
+            return nil
+        }
         
         isSyncing = true
         isLoading = true
@@ -99,6 +134,8 @@ class CloudDataManager: ObservableObject {
         
         // Generate unique ID
         let itemId = generateItemId()
+        
+        print("🆕 Creating new item: \(name) (ID: \(itemId))")
         
         do {
             // 1. Create in cloud first
@@ -152,9 +189,14 @@ class CloudDataManager: ObservableObject {
     }
     
     func addMessage(to item: CloudItem, message: String, userName: String = "匿名", type: MessageType = .general) async -> Bool {
-        guard !isSyncing else { return false }
+        guard !isSyncing else {
+            print("⏳ Currently syncing, cannot add message")
+            return false
+        }
         
         syncStatus = .syncing
+        
+        print("💬 Adding message to item \(item.itemId): \(message)")
         
         do {
             // 1. Post message to cloud first
@@ -221,6 +263,8 @@ class CloudDataManager: ObservableObject {
     }
     
     func loadMessages(for item: CloudItem) async {
+        print("📨 Loading messages for item: \(item.itemId)")
+        
         do {
             let messagesData = try await appwriteService.getMessages(for: item.itemId)
             
@@ -242,6 +286,8 @@ class CloudDataManager: ObservableObject {
     }
     
     func deleteItem(_ item: CloudItem) async -> Bool {
+        print("🗑️ Deleting item: \(item.itemId)")
+        
         do {
             // Delete from cloud
             try await appwriteService.deleteItem(itemId: item.itemId)
@@ -263,6 +309,7 @@ class CloudDataManager: ObservableObject {
     }
     
     func refreshData() async {
+        print("🔄 Manual data refresh requested")
         await loadItems()
     }
     
@@ -273,6 +320,8 @@ class CloudDataManager: ObservableObject {
     // MARK: - Local Caching (for offline support)
     
     private func updateLocalCache(with cloudItems: [CloudItem]) async {
+        print("💾 Updating local cache with \(cloudItems.count) items")
+        
         // Clear existing local cache
         let request: NSFetchRequest<NSFetchRequestResult> = Item.fetchRequest()
         let deleteRequest = NSBatchDeleteRequest(fetchRequest: request)
@@ -286,6 +335,7 @@ class CloudDataManager: ObservableObject {
             }
             
             try viewContext.save()
+            print("✅ Local cache updated successfully")
             
         } catch {
             print("❌ Failed to update local cache: \(error)")
@@ -331,6 +381,8 @@ class CloudDataManager: ObservableObject {
     }
     
     private func loadFromLocalCache() async {
+        print("📱 Loading from local cache...")
+        
         let cachedItems = Item.fetchAllItems(in: viewContext)
         
         let cloudItems = cachedItems.compactMap { item -> CloudItem? in
@@ -345,6 +397,8 @@ class CloudDataManager: ObservableObject {
     // MARK: - Periodic Refresh
     
     private func startPeriodicRefresh() {
+        print("⏰ Starting periodic refresh (every 2 minutes)")
+        
         // Refresh every 2 minutes
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { _ in
             Task {

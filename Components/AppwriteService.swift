@@ -2,7 +2,7 @@
 //  AppwriteService.swift
 //  digitalmemotag
 //
-//  Enhanced Appwrite service with better error handling and additional functionality
+//  Enhanced Appwrite service with authentication integration
 //
 
 import Appwrite
@@ -11,7 +11,7 @@ import Foundation
 class AppwriteService: ObservableObject {
     static let shared = AppwriteService()
     
-    private var client = Client
+    private var client: Client
     let databases: Databases
     
     // PRODUCTION: Use the correct database ID from your Appwrite dashboard
@@ -52,6 +52,24 @@ class AppwriteService: ObservableObject {
         }
     }
     
+    // MARK: - Client Management
+    
+    func updateClient(_ newClient: Client) {
+        self.client = newClient
+        // Re-initialize databases with new client
+        let newDatabases = Databases(newClient)
+        // We can't reassign the let property, so we'll work with the client directly
+        
+        // Test connection with updated client
+        Task {
+            await testConnection()
+        }
+    }
+    
+    func getCurrentClient() -> Client {
+        return client
+    }
+    
     // MARK: - Connection Testing
     
     @MainActor
@@ -59,6 +77,7 @@ class AppwriteService: ObservableObject {
         connectionStatus = .connecting
         
         do {
+            let databases = Databases(client)
             _ = try await databases.listDocuments(
                 databaseId: databaseId,
                 collectionId: itemsCollectionId,
@@ -96,6 +115,7 @@ class AppwriteService: ObservableObject {
         print("📝 Creating item with data: \(data)")
         
         do {
+            let databases = Databases(client)
             let document = try await databases.createDocument(
                 databaseId: databaseId,
                 collectionId: itemsCollectionId,
@@ -119,6 +139,7 @@ class AppwriteService: ObservableObject {
         }
         
         do {
+            let databases = Databases(client)
             let response = try await databases.listDocuments(
                 databaseId: databaseId,
                 collectionId: itemsCollectionId,
@@ -145,6 +166,7 @@ class AppwriteService: ObservableObject {
         print("🔍 Fetching items from collection: '\(itemsCollectionId)' in database: '\(databaseId)'")
         
         do {
+            let databases = Databases(client)
             let response = try await databases.listDocuments(
                 databaseId: databaseId,
                 collectionId: itemsCollectionId,
@@ -179,6 +201,7 @@ class AppwriteService: ObservableObject {
         }
         
         do {
+            let databases = Databases(client)
             // First, find the document ID
             let items = try await databases.listDocuments(
                 databaseId: databaseId,
@@ -212,6 +235,7 @@ class AppwriteService: ObservableObject {
         }
         
         do {
+            let databases = Databases(client)
             // First, find the document ID
             let items = try await databases.listDocuments(
                 databaseId: databaseId,
@@ -262,6 +286,7 @@ class AppwriteService: ObservableObject {
         }
         
         do {
+            let databases = Databases(client)
             let response = try await databases.listDocuments(
                 databaseId: databaseId,
                 collectionId: messagesCollectionId,
@@ -294,6 +319,7 @@ class AppwriteService: ObservableObject {
         ]
         
         do {
+            let databases = Databases(client)
             let document = try await databases.createDocument(
                 databaseId: databaseId,
                 collectionId: messagesCollectionId,
@@ -317,6 +343,7 @@ class AppwriteService: ObservableObject {
         }
         
         do {
+            let databases = Databases(client)
             try await databases.deleteDocument(
                 databaseId: databaseId,
                 collectionId: messagesCollectionId,
@@ -359,6 +386,7 @@ class AppwriteService: ObservableObject {
     
     func testDatabaseAccess() async -> Bool {
         do {
+            let databases = Databases(client)
             _ = try await databases.listDocuments(
                 databaseId: databaseId,
                 collectionId: itemsCollectionId,
@@ -373,6 +401,7 @@ class AppwriteService: ObservableObject {
     
     func testCollectionAccess(collectionId: String) async -> Bool {
         do {
+            let databases = Databases(client)
             _ = try await databases.listDocuments(
                 databaseId: databaseId,
                 collectionId: collectionId,
