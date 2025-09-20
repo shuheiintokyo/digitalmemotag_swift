@@ -1,4 +1,4 @@
-// MARK: - SettingsView.swift
+// MARK: - Enhanced SettingsView.swift with Authentication Options
 import SwiftUI
 
 struct SettingsView: View {
@@ -7,17 +7,17 @@ struct SettingsView: View {
     @AppStorage("quickActionYellow") private var quickActionYellow = "作業に遅れが生じています"
     @AppStorage("quickActionRed") private var quickActionRed = "問題が発生しました。"
     
+    @StateObject private var authService = AuthenticationService.shared
     @State private var showingResetAlert = false
     @State private var showingAbout = false
+    @State private var showingClearCredentialsAlert = false
     
     var body: some View {
         NavigationView {
             List {
-                // Quick Action Settings
-                
-                // Add this section to your existing SettingsView
+                // Account Section
                 Section(header: Text("アカウント")) {
-                    if let user = AuthenticationService.shared.currentUser {
+                    if let user = authService.currentUser {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(user.name.isEmpty ? "ユーザー" : user.name)
                                 .font(.headline)
@@ -29,12 +29,96 @@ struct SettingsView: View {
                         
                         Button("ログアウト") {
                             Task {
-                                await AuthenticationService.shared.logout()
+                                await authService.logout()
                             }
                         }
                         .foregroundColor(.red)
                     }
                 }
+                
+                // Authentication Settings
+                Section(header: Text("認証設定")) {
+                    // Remember Credentials Toggle
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("ログイン情報を記憶")
+                                .font(.body)
+                            Text("メールアドレスとパスワードを安全に保存")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Toggle("", isOn: Binding(
+                            get: { authService.rememberCredentials },
+                            set: { authService.toggleRememberCredentials($0) }
+                        ))
+                    }
+                    
+                    // Biometric Authentication Toggle
+                    if authService.isBiometricAvailable() {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(authService.getBiometricType())でログイン")
+                                    .font(.body)
+                                Text("生体認証で簡単にアクセス")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Toggle("", isOn: Binding(
+                                get: { authService.biometricAuthEnabled },
+                                set: { authService.toggleBiometricAuth($0) }
+                            ))
+                            .disabled(!authService.rememberCredentials)
+                        }
+                        
+                        if !authService.rememberCredentials && authService.biometricAuthEnabled {
+                            Text("生体認証を使用するには「ログイン情報を記憶」を有効にしてください")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                        }
+                    } else {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("生体認証")
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                Text("このデバイスでは利用できません")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "xmark")
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    
+                    // Saved Credentials Info
+                    if authService.rememberCredentials && !authService.savedUsername.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("保存済みアカウント")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(authService.savedUsername)
+                                .font(.body)
+                                .foregroundColor(.blue)
+                            
+                            Button("保存済み情報を削除") {
+                                showingClearCredentialsAlert = true
+                            }
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        }
+                    }
+                }
+                
+                // Quick Action Settings
                 Section(header: Text("クイックアクションボタン設定")) {
                     QuickActionSetting(
                         title: "青ボタン",
@@ -73,7 +157,7 @@ struct SettingsView: View {
                 Section(header: Text("アプリ情報")) {
                     InfoRow(label: "アプリ名", value: "Digital Memo Tag")
                     InfoRow(label: "バージョン", value: "1.0.0")
-                    InfoRow(label: "ビルド", value: "2025.09.18")
+                    InfoRow(label: "ビルド", value: "2025.09.20")
                     InfoRow(label: "開発者", value: "DigitalMemoTag Team")
                     
                     Button("アプリについて") {
@@ -95,6 +179,16 @@ struct SettingsView: View {
                 secondaryButton: .cancel(Text("キャンセル"))
             )
         }
+        .alert(isPresented: $showingClearCredentialsAlert) {
+            Alert(
+                title: Text("保存済み情報を削除"),
+                message: Text("保存されているログイン情報を削除しますか？次回ログイン時に再入力が必要になります。"),
+                primaryButton: .destructive(Text("削除")) {
+                    authService.clearSavedCredentials()
+                },
+                secondaryButton: .cancel(Text("キャンセル"))
+            )
+        }
         .sheet(isPresented: $showingAbout) {
             AboutView()
         }
@@ -105,10 +199,13 @@ struct SettingsView: View {
         quickActionGreen = "作業を完了しました"
         quickActionYellow = "作業に遅れが生じています"
         quickActionRed = "問題が発生しました。"
+        
+        // Reset authentication settings
+        authService.clearSavedCredentials()
     }
 }
 
-// MARK: - Quick Action Setting Component
+// MARK: - Quick Action Setting Component (keep existing)
 struct QuickActionSetting: View {
     let title: String
     let color: Color
@@ -133,7 +230,7 @@ struct QuickActionSetting: View {
     }
 }
 
-// MARK: - Info Row Component
+// MARK: - Info Row Component (keep existing)
 struct InfoRow: View {
     let label: String
     let value: String
@@ -148,7 +245,7 @@ struct InfoRow: View {
     }
 }
 
-// MARK: - About View (Clean version without logo)
+// MARK: - About View (keep existing from previous code)
 struct AboutView: View {
     @Environment(\.presentationMode) var presentationMode
     
@@ -211,9 +308,9 @@ struct AboutView: View {
                             )
                             
                             AboutFeatureCard(
-                                icon: "bolt.circle",
-                                title: "高速処理",
-                                description: "素早いレスポンス"
+                                icon: "faceid",
+                                title: "生体認証",
+                                description: "安全で便利なログイン"
                             )
                         }
                     }
@@ -253,7 +350,7 @@ struct AboutView: View {
     }
 }
 
-// MARK: - About Feature Card
+// MARK: - About Feature Card (keep existing)
 struct AboutFeatureCard: View {
     let icon: String
     let title: String
@@ -286,5 +383,3 @@ struct AboutFeatureCard: View {
         .cornerRadius(12)
     }
 }
-
-

@@ -2,10 +2,11 @@
 //  LoginView.swift
 //  digitalmemotag
 //
-//  Authentication screen with login and registration
+//  Enhanced with credential storage and biometric authentication
 //
 
 import SwiftUI
+import LocalAuthentication
 
 struct LoginView: View {
     @StateObject private var authService = AuthenticationService.shared
@@ -17,6 +18,8 @@ struct LoginView: View {
     @State private var isRegistering = false
     @State private var showingForgotPassword = false
     @State private var showingAlert = false
+    @State private var rememberMe = false
+    @State private var showingBiometricPrompt = false
     
     @FocusState private var focusedField: Field?
     
@@ -43,6 +46,11 @@ struct LoginView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding(.top, 40)
+                    
+                    // Biometric Authentication Section
+                    if !isRegistering && authService.isBiometricAvailable() && authService.biometricAuthEnabled && !authService.savedUsername.isEmpty {
+                        BiometricLoginSection(authService: authService)
+                    }
                     
                     // Input Fields
                     VStack(spacing: 16) {
@@ -88,9 +96,9 @@ struct LoginView: View {
                             
                             SecureField("8文字以上", text: $password)
                                 .textFieldStyle(CustomTextFieldStyle())
-                                .textContentType(.oneTimeCode)  // Add this - prevents password autofill
-                                .autocapitalization(.none)      // Add this
-                                .disableAutocorrection(true)     // Add this
+                                .textContentType(.oneTimeCode)
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
                                 .focused($focusedField, equals: .password)
                                 .submitLabel(isRegistering ? .next : .done)
                                 .onSubmit {
@@ -101,8 +109,7 @@ struct LoginView: View {
                                     }
                                 }
                         }
-
-                        // Update the Confirm Password field section (around line 107)
+                        
                         // Confirm Password field (only for registration)
                         if isRegistering {
                             VStack(alignment: .leading, spacing: 8) {
@@ -112,9 +119,9 @@ struct LoginView: View {
                                 
                                 SecureField("パスワードを再入力", text: $confirmPassword)
                                     .textFieldStyle(CustomTextFieldStyle())
-                                    .textContentType(.oneTimeCode)  // Add this - prevents password autofill
-                                    .autocapitalization(.none)      // Add this
-                                    .disableAutocorrection(true)     // Add this
+                                    .textContentType(.oneTimeCode)
+                                    .autocapitalization(.none)
+                                    .disableAutocorrection(true)
                                     .focused($focusedField, equals: .confirmPassword)
                                     .submitLabel(.done)
                                     .onSubmit {
@@ -122,8 +129,41 @@ struct LoginView: View {
                                     }
                             }
                         }
+                        
+                        // Remember Me Toggle (only for login)
+                        if !isRegistering {
+                            HStack {
+                                Toggle("ログイン情報を記憶", isOn: $rememberMe)
+                                    .font(.caption)
+                                
+                                Spacer()
+                                
+                                if authService.isBiometricAvailable() && rememberMe {
+                                    Button("生体認証を設定") {
+                                        showingBiometricPrompt = true
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                }
+                            }
+                            .padding(.horizontal, 4)
+                        }
                     }
                     .padding(.horizontal, 30)
+                    
+                    // Auto-fill saved credentials
+                    if !isRegistering && !authService.savedUsername.isEmpty {
+                        Button("保存済み: \(authService.savedUsername)") {
+                            email = authService.savedUsername
+                            if let savedPassword = authService.getSavedPassword(for: authService.savedUsername) {
+                                password = savedPassword
+                                rememberMe = true
+                            }
+                        }
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 30)
+                    }
                     
                     // Error Message
                     if let errorMessage = authService.errorMessage {
@@ -189,30 +229,6 @@ struct LoginView: View {
                     }
                     .padding(.horizontal, 30)
                     
-                    // OAuth Options (future implementation)
-                    /*
-                    VStack(spacing: 16) {
-                        Text("または")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        HStack(spacing: 20) {
-                            OAuthButton(provider: .google, action: {
-                                Task {
-                                    await authService.loginWithProvider(.google)
-                                }
-                            })
-                            
-                            OAuthButton(provider: .apple, action: {
-                                Task {
-                                    await authService.loginWithProvider(.apple)
-                                }
-                            })
-                        }
-                    }
-                    .padding(.horizontal, 30)
-                    */
-                    
                     Spacer(minLength: 40)
                 }
             }
@@ -221,8 +237,23 @@ struct LoginView: View {
                 focusedField = nil
             }
         }
+        .onAppear {
+            // Auto-fill saved credentials if available
+            if !authService.savedUsername.isEmpty {
+                email = authService.savedUsername
+                rememberMe = authService.rememberCredentials
+            }
+        }
         .sheet(isPresented: $showingForgotPassword) {
             ForgotPasswordView()
+        }
+        .alert("生体認証を設定", isPresented: $showingBiometricPrompt) {
+            Button("設定する") {
+                authService.toggleBiometricAuth(true)
+            }
+            Button("キャンセル", role: .cancel) { }
+        } message: {
+            Text("\(authService.getBiometricType())を使用して次回から簡単にログインできます。")
         }
         .alert(isPresented: $showingAlert) {
             Alert(
@@ -255,11 +286,15 @@ struct LoginView: View {
         
         let success = await authService.login(
             email: email.lowercased().trimmingCharacters(in: .whitespacesAndNewlines),
-            password: password
+            password: password,
+            rememberMe: rememberMe
         )
         
         if success {
-            // Navigation will be handled by the parent view observing isAuthenticated
+            // Show biometric setup prompt if conditions are met
+            if rememberMe && authService.isBiometricAvailable() && !authService.biometricAuthEnabled {
+                showingBiometricPrompt = true
+            }
             print("Login successful")
         }
     }
@@ -270,17 +305,17 @@ struct LoginView: View {
         let success = await authService.register(
             email: email.lowercased().trimmingCharacters(in: .whitespacesAndNewlines),
             password: password,
-            name: userName.isEmpty ? nil : userName.trimmingCharacters(in: .whitespacesAndNewlines)
+            name: userName.isEmpty ? nil : userName.trimmingCharacters(in: .whitespacesAndNewlines),
+            rememberMe: rememberMe
         )
         
         if success {
-            // User is automatically logged in after registration
             print("Registration successful")
         }
     }
     
     private func clearForm() {
-        email = ""
+        email = authService.savedUsername // Keep saved username
         password = ""
         confirmPassword = ""
         userName = ""
@@ -289,7 +324,62 @@ struct LoginView: View {
     }
 }
 
-// MARK: - Custom Text Field Style
+// MARK: - Biometric Login Section
+
+struct BiometricLoginSection: View {
+    @ObservedObject var authService: AuthenticationService
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("簡単ログイン")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            Button(action: {
+                Task {
+                    let success = await authService.authenticateWithBiometrics()
+                    if !success {
+                        // Handle failure if needed
+                        print("Biometric authentication failed")
+                    }
+                }
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: authService.getBiometricType() == "Face ID" ? "faceid" : "touchid")
+                        .font(.title2)
+                    
+                    VStack(alignment: .leading) {
+                        Text("\(authService.getBiometricType())でログイン")
+                            .font(.headline)
+                        Text(authService.savedUsername)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.secondary)
+                }
+                .foregroundColor(.primary)
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+            }
+            .disabled(authService.isLoading)
+            
+            Divider()
+                .padding(.horizontal, 20)
+            
+            Text("または手動でログイン")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 30)
+    }
+}
+
+// MARK: - Custom Text Field Style (keep existing)
 
 struct CustomTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
@@ -301,7 +391,7 @@ struct CustomTextFieldStyle: TextFieldStyle {
     }
 }
 
-// MARK: - Forgot Password View
+// MARK: - Forgot Password View (keep existing)
 
 struct ForgotPasswordView: View {
     @Environment(\.presentationMode) var presentationMode
@@ -396,49 +486,5 @@ struct ForgotPasswordView: View {
             alertMessage = authService.errorMessage ?? "送信に失敗しました"
         }
         showingAlert = true
-    }
-}
-
-// MARK: - OAuth Button Component
-
-struct OAuthButton: View {
-    let provider: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: providerIcon)
-                .font(.title2)
-                .foregroundColor(providerColor)
-                .frame(width: 50, height: 50)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-        }
-    }
-    
-    private var providerIcon: String {
-        switch provider {
-        case "google": return "g.circle"    // Added quotes
-        case "apple": return "apple.logo"   // Added quotes
-        case "github": return "person.circle" // Added quotes
-        default: return "person.circle"
-        }
-    }
-    
-    private var providerColor: Color {
-        switch provider {
-        case "google": return .red      // Added quotes
-        case "apple": return .black     // Added quotes
-        case "github": return .purple   // Added quotes
-        default: return .gray
-        }
-    }
-}
-
-// MARK: - Preview
-
-struct LoginView_Previews: PreviewProvider {
-    static var previews: some View {
-        LoginView()
     }
 }

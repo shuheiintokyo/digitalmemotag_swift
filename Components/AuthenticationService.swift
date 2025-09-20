@@ -2,13 +2,15 @@
 //  AuthenticationService.swift
 //  digitalmemotag
 //
-//  Appwrite Authentication Service - Email/Password Only
+//  Enhanced with credential storage and biometric authentication
 //
 
 import Foundation
 import Appwrite
 import JSONCodable
 import SwiftUI
+import LocalAuthentication
+import Security
 
 @MainActor
 class AuthenticationService: ObservableObject {
@@ -16,12 +18,18 @@ class AuthenticationService: ObservableObject {
     
     private let client: Client
     private let account: Account
+    private let keychainManager = KeychainManager()
     
     @Published var isAuthenticated = false
     @Published var currentUser: User<[String: AnyCodable]>?
     @Published var currentSession: Session?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    
+    // Credential storage settings
+    @Published var rememberCredentials = false
+    @Published var biometricAuthEnabled = false
+    @Published var savedUsername = ""
     
     private init() {
         self.client = Client()
@@ -30,15 +38,109 @@ class AuthenticationService: ObservableObject {
         
         self.account = Account(client)
         
+        // Load saved preferences
+        loadSavedPreferences()
+        
         // Check for existing session on init
         Task {
             await checkSession()
         }
     }
     
-    // MARK: - Authentication Methods
+    // MARK: - Credential Storage
     
-    func register(email: String, password: String, name: String? = nil) async -> Bool {
+    private func loadSavedPreferences() {
+        rememberCredentials = UserDefaults.standard.bool(forKey: "rememberCredentials")
+        biometricAuthEnabled = UserDefaults.standard.bool(forKey: "biometricAuthEnabled")
+        savedUsername = UserDefaults.standard.string(forKey: "savedUsername") ?? ""
+    }
+    
+    private func savePreferences() {
+        UserDefaults.standard.set(rememberCredentials, forKey: "rememberCredentials")
+        UserDefaults.standard.set(biometricAuthEnabled, forKey: "biometricAuthEnabled")
+        UserDefaults.standard.set(savedUsername, forKey: "savedUsername")
+    }
+    
+    func saveCredentials(email: String, password: String) {
+        if rememberCredentials {
+            savedUsername = email
+            keychainManager.save(password, forKey: "user_password_\(email)")
+            savePreferences()
+            print("✅ Credentials saved securely")
+        }
+    }
+    
+    func getSavedPassword(for email: String) -> String? {
+        return keychainManager.load(forKey: "user_password_\(email)")
+    }
+    
+    func clearSavedCredentials() {
+        if !savedUsername.isEmpty {
+            keychainManager.delete(forKey: "user_password_\(savedUsername)")
+        }
+        savedUsername = ""
+        rememberCredentials = false
+        biometricAuthEnabled = false
+        savePreferences()
+        print("🗑️ Credentials cleared")
+    }
+    
+    // MARK: - Biometric Authentication
+    
+    func isBiometricAvailable() -> Bool {
+        let context = LAContext()
+        var error: NSError?
+        return context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+    }
+    
+    func getBiometricType() -> String {
+        let context = LAContext()
+        guard isBiometricAvailable() else { return "None" }
+        
+        switch context.biometryType {
+        case .faceID:
+            return "Face ID"
+        case .touchID:
+            return "Touch ID"
+        case .opticID:
+            return "Optic ID"
+        default:
+            return "Biometric"
+        }
+    }
+    
+    func authenticateWithBiometrics() async -> Bool {
+        guard isBiometricAvailable(), biometricAuthEnabled, !savedUsername.isEmpty else {
+            return false
+        }
+        
+        let context = LAContext()
+        let reason = "サインインするために\(getBiometricType())を使用してください"
+        
+        do {
+            let success = try await context.evaluatePolicy(
+                .deviceOwnerAuthenticationWithBiometrics,
+                localizedReason: reason
+            )
+            
+            if success {
+                // Auto-login with saved credentials
+                if let savedPassword = getSavedPassword(for: savedUsername) {
+                    return await login(email: savedUsername, password: savedPassword)
+                }
+            }
+            
+            return false
+            
+        } catch {
+            print("❌ Biometric authentication failed: \(error)")
+            return false
+        }
+    }
+    
+    // MARK: - Enhanced Authentication Methods
+    
+    func register(email: String, password: String, name: String? = nil, rememberMe: Bool = false) async -> Bool {
         isLoading = true
         errorMessage = nil
         
@@ -61,6 +163,12 @@ class AuthenticationService: ObservableObject {
             self.currentSession = session
             self.isAuthenticated = true
             
+            // Save credentials if requested
+            if rememberMe {
+                self.rememberCredentials = true
+                saveCredentials(email: email, password: password)
+            }
+            
             // Update AppwriteService with authenticated client
             AppwriteService.shared.updateClient(self.client)
             
@@ -77,7 +185,7 @@ class AuthenticationService: ObservableObject {
         }
     }
     
-    func login(email: String, password: String) async -> Bool {
+    func login(email: String, password: String, rememberMe: Bool = false) async -> Bool {
         isLoading = true
         errorMessage = nil
         
@@ -94,6 +202,12 @@ class AuthenticationService: ObservableObject {
             self.currentSession = session
             self.currentUser = user
             self.isAuthenticated = true
+            
+            // Save credentials if requested
+            if rememberMe {
+                self.rememberCredentials = true
+                saveCredentials(email: email, password: password)
+            }
             
             // Update AppwriteService with authenticated client
             AppwriteService.shared.updateClient(self.client)
@@ -136,22 +250,28 @@ class AuthenticationService: ObservableObject {
     }
     
     func checkSession() async {
+        // First try biometric authentication if enabled
+        if biometricAuthEnabled && !savedUsername.isEmpty {
+            let biometricSuccess = await authenticateWithBiometrics()
+            if biometricSuccess {
+                return
+            }
+        }
+        
+        // Then check for existing session
         do {
-            // Try to get the current user
             let user = try await account.get()
             
             await MainActor.run {
                 self.currentUser = user
                 self.isAuthenticated = true
                 
-                // Update AppwriteService with authenticated client
                 AppwriteService.shared.updateClient(self.client)
             }
             
             print("✅ Existing session found for user: \(user.email)")
             
         } catch {
-            // No valid session
             await MainActor.run {
                 self.isAuthenticated = false
                 self.currentUser = nil
@@ -159,6 +279,27 @@ class AuthenticationService: ObservableObject {
             }
             
             print("ℹ️ No existing session found")
+        }
+    }
+    
+    // MARK: - Settings Management
+    
+    func toggleRememberCredentials(_ enabled: Bool) {
+        rememberCredentials = enabled
+        if !enabled {
+            clearSavedCredentials()
+        }
+        savePreferences()
+    }
+    
+    func toggleBiometricAuth(_ enabled: Bool) {
+        biometricAuthEnabled = enabled
+        if !enabled {
+            // Keep credentials but disable biometric
+            savePreferences()
+        } else if rememberCredentials && !savedUsername.isEmpty {
+            // Enable biometric with existing credentials
+            savePreferences()
         }
     }
     
@@ -171,7 +312,7 @@ class AuthenticationService: ObservableObject {
         do {
             _ = try await account.createRecovery(
                 email: email,
-                url: "https://digitalmemotag.app/recovery" // Update with your recovery URL
+                url: "https://digitalmemotag.app/recovery"
             )
             
             print("✅ Password recovery email sent to: \(email)")
@@ -204,8 +345,64 @@ class AuthenticationService: ObservableObject {
         }
     }
     
-    // Get the client for other services
     func getClient() -> Client {
         return client
+    }
+}
+
+// MARK: - Keychain Manager
+
+class KeychainManager {
+    private let service = "com.shuhei.digitalmemotag"
+    
+    func save(_ data: String, forKey key: String) {
+        let data = Data(data.utf8)
+        
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key,
+            kSecValueData as String: data
+        ]
+        
+        // Delete existing item first
+        SecItemDelete(query as CFDictionary)
+        
+        // Add new item
+        let status = SecItemAdd(query as CFDictionary, nil)
+        if status != errSecSuccess {
+            print("❌ Keychain save failed: \(status)")
+        }
+    }
+    
+    func load(forKey key: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let string = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        
+        return string
+    }
+    
+    func delete(forKey key: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key
+        ]
+        
+        SecItemDelete(query as CFDictionary)
     }
 }
