@@ -1,4 +1,4 @@
-// MARK: - CloudDataManager.swift (Fixed implementation)
+// MARK: - CloudDataManager.swift (Updated with better message handling)
 import Foundation
 import CoreData
 import Appwrite
@@ -27,8 +27,6 @@ class CloudDataManager: ObservableObject {
     // MARK: - Initialization
     private init() {
         self.viewContext = PersistenceController.shared.container.viewContext
-        
-        // Don't auto-load data on init - wait for explicit call
         print("🏗️ CloudDataManager initialized")
     }
     
@@ -188,36 +186,13 @@ class CloudDataManager: ObservableObject {
         }
     }
     
+    // MARK: - Enhanced Message Handling
+    
     func addMessage(to item: CloudItem, message: String, userName: String = "匿名", type: MessageType = .general) async -> Bool {
-        guard !isSyncing else {
-            print("⏳ Currently syncing, cannot add message")
-            return false
-        }
-        
-        syncStatus = .syncing
-        
-        print("💬 Adding message to item \(item.itemId): \(message)")
+        print("💬 DataManager adding message to item \(item.itemId): \(message)")
         
         do {
-            // 1. Post message to cloud first
-            let messageId = try await appwriteService.postMessage(
-                itemId: item.itemId,
-                message: message,
-                userName: userName,
-                msgType: type.rawValue
-            )
-            
-            // 2. Create CloudMessage object
-            let newMessage = CloudMessage(
-                id: messageId,
-                itemId: item.itemId,
-                message: message,
-                userName: userName,
-                messageType: type,
-                createdAt: Date()
-            )
-            
-            // 3. Update item status if needed
+            // 1. Update item status if needed (before posting message)
             if type != .general {
                 let newStatus: ItemStatus = {
                     switch type {
@@ -229,60 +204,59 @@ class CloudDataManager: ObservableObject {
                     }
                 }()
                 
-                // Update status in cloud
+                // Update status in cloud first
                 try await appwriteService.updateItemStatus(itemId: item.itemId, status: newStatus.rawValue)
+                print("✅ Updated item status: \(newStatus.rawValue)")
                 
-                // Update local item
+                // Update local item status immediately
                 if let index = items.firstIndex(where: { $0.id == item.id }) {
                     items[index].status = newStatus
                     items[index].updatedAt = Date()
                 }
             }
             
-            // 4. Add message to local item
-            if let index = items.firstIndex(where: { $0.id == item.id }) {
-                items[index].messages.insert(newMessage, at: 0)
-            }
+            // 2. The message should already be posted to Appwrite by the caller
+            // We just need to refresh the messages for this item
+            await refreshMessagesForItem(item.itemId)
             
-            isOnline = true
             syncStatus = .success
             lastError = nil
             lastSyncTime = Date()
             
-            print("✅ Added message to cloud for item: \(item.itemId)")
+            print("✅ Successfully handled message addition for item: \(item.itemId)")
             return true
             
         } catch {
-            isOnline = false
             syncStatus = .error(error.localizedDescription)
-            lastError = "メッセージ追加に失敗: \(error.localizedDescription)"
+            lastError = "メッセージ処理に失敗: \(error.localizedDescription)"
             
-            print("❌ Failed to add message to cloud: \(error)")
+            print("❌ Failed to handle message addition: \(error)")
             return false
         }
     }
     
-    func loadMessages(for item: CloudItem) async {
-        print("📨 Loading messages for item: \(item.itemId)")
+    func refreshMessagesForItem(_ itemId: String) async {
+        print("🔄 Refreshing messages for item: \(itemId)")
         
         do {
-            let messagesData = try await appwriteService.getMessages(for: item.itemId)
-            
+            let messagesData = try await appwriteService.getMessages(for: itemId)
             let messages = messagesData.compactMap { data in
                 CloudMessage.from(appwriteData: data)
             }.sorted { $0.createdAt > $1.createdAt }
             
-            // Update local item
-            if let index = items.firstIndex(where: { $0.id == item.id }) {
+            // Update the specific item's messages
+            if let index = items.firstIndex(where: { $0.itemId == itemId }) {
                 items[index].messages = messages
+                print("✅ Refreshed \(messages.count) messages for item: \(itemId)")
             }
             
-            print("✅ Loaded \(messages.count) messages for item: \(item.itemId)")
-            
         } catch {
-            print("❌ Failed to load messages: \(error)")
-            lastError = "メッセージ読み込みに失敗: \(error.localizedDescription)"
+            print("❌ Failed to refresh messages for item \(itemId): \(error)")
         }
+    }
+    
+    func loadMessages(for item: CloudItem) async {
+        await refreshMessagesForItem(item.itemId)
     }
     
     func deleteItem(_ item: CloudItem) async -> Bool {
@@ -315,6 +289,17 @@ class CloudDataManager: ObservableObject {
     
     func findItem(byId itemId: String) -> CloudItem? {
         return items.first { $0.itemId == itemId }
+    }
+    
+    // MARK: - Utility Methods
+    
+    func forceUIUpdate() {
+        // Trigger a UI update by changing the items array reference
+        let currentItems = items
+        items = []
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.items = currentItems
+        }
     }
     
     // MARK: - Local Caching (for offline support)

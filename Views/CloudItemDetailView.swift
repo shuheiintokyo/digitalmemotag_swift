@@ -1,26 +1,27 @@
 //
-//  ItemDetailView.swift
+//  CloudItemDetailView.swift
 //  digitalmemotag
 //
-//  Created by Shuhei Kinugasa on 2025/09/15.
+//  Fixed message board with proper real-time updates
 //
 
-// MARK: - ItemDetailView.swift (Message Board)
 import SwiftUI
 import CoreData
 import UIKit
 import AVFoundation
 
-// MARK: - CloudItemDetailView.swift
 struct CloudItemDetailView: View {
-    let item: CloudItem
-    let dataManager: CloudDataManager
+    @State var item: CloudItem  // Changed to @State to allow local updates
+    @ObservedObject var dataManager: CloudDataManager
     
     @State private var newMessage = ""
     @State private var userName = ""
     @State private var showingQRCode = false
     @State private var isAddingMessage = false
     @State private var showingDeleteAlert = false
+    @State private var isLoadingMessages = false
+    @State private var localMessages: [CloudMessage] = []
+    @State private var refreshTrigger = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -28,10 +29,13 @@ struct CloudItemDetailView: View {
             CloudItemInfoHeader(item: item, showingQRCode: $showingQRCode)
             
             // Quick Action Buttons
-            CloudQuickActionButtons(
+            EnhancedQuickActionButtons(
                 item: item,
                 dataManager: dataManager,
-                isLoading: isAddingMessage
+                isLoading: isAddingMessage,
+                onQuickAction: { messageType in
+                    await handleQuickAction(messageType)
+                }
             )
             
             // Message Input
@@ -44,16 +48,26 @@ struct CloudItemDetailView: View {
                 }
             )
             
-            // Messages List
-            CloudMessagesList(
-                messages: item.messages,
-                isLoading: dataManager.isLoading
+            // Messages List with refresh trigger
+            EnhancedMessagesList(
+                messages: localMessages,
+                isLoading: isLoadingMessages
             )
+            .id(refreshTrigger) // Force refresh when trigger changes
         }
         .navigationTitle(item.name)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarItems(
             trailing: HStack {
+                Button(action: {
+                    Task {
+                        await loadMessages()
+                    }
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .foregroundColor(isLoadingMessages ? .gray : .blue)
+                }
+                
                 Button(action: { showingQRCode = true }) {
                     Image(systemName: "qrcode")
                 }
@@ -74,7 +88,7 @@ struct CloudItemDetailView: View {
                 primaryButton: .destructive(Text("削除")) {
                     Task {
                         if await dataManager.deleteItem(item) {
-                            // Navigate back
+                            // Navigate back will be handled by the navigation stack
                         }
                     }
                 },
@@ -82,8 +96,65 @@ struct CloudItemDetailView: View {
             )
         }
         .onAppear {
+            print("🎯 CloudItemDetailView appeared for item: \(item.itemId)")
+            setupInitialData()
             Task {
-                await dataManager.loadMessages(for: item)
+                await loadMessages()
+            }
+        }
+        .onChange(of: dataManager.items) { updatedItems in
+            // Update local item when dataManager items change
+            if let updatedItem = updatedItems.first(where: { $0.id == item.id }) {
+                print("🔄 Updating local item from dataManager")
+                item = updatedItem
+                localMessages = updatedItem.messages
+                refreshTrigger.toggle()
+            }
+        }
+        .refreshable {
+            await loadMessages()
+        }
+    }
+    
+    private func setupInitialData() {
+        localMessages = item.messages.sorted { $0.createdAt > $1.createdAt }
+        print("📝 Initial messages count: \(localMessages.count)")
+    }
+    
+    private func loadMessages() async {
+        print("📨 Loading messages for item: \(item.itemId)")
+        isLoadingMessages = true
+        
+        do {
+            let messagesData = try await AppwriteService.shared.getMessages(for: item.itemId)
+            print("📦 Raw messages data count: \(messagesData.count)")
+            
+            let messages = messagesData.compactMap { data in
+                CloudMessage.from(appwriteData: data)
+            }.sorted { $0.createdAt > $1.createdAt }
+            
+            await MainActor.run {
+                localMessages = messages
+                
+                // Update the item's messages
+                item.messages = messages
+                
+                // Update in dataManager as well
+                if let index = dataManager.items.firstIndex(where: { $0.id == item.id }) {
+                    dataManager.items[index].messages = messages
+                }
+                
+                // Trigger UI refresh
+                refreshTrigger.toggle()
+                
+                print("✅ Loaded \(messages.count) messages for item: \(item.itemId)")
+                isLoadingMessages = false
+            }
+            
+        } catch {
+            await MainActor.run {
+                print("❌ Failed to load messages: \(error)")
+                isLoadingMessages = false
             }
         }
     }
@@ -91,85 +162,167 @@ struct CloudItemDetailView: View {
     private func sendMessage() async {
         guard !newMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
+        print("💬 Sending message: \(newMessage)")
         isAddingMessage = true
         
         let trimmedMessage = newMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedUserName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalUserName = trimmedUserName.isEmpty ? "匿名" : trimmedUserName
         
-        let success = await dataManager.addMessage(
-            to: item,
+        // Create optimistic message for immediate UI update
+        let optimisticMessage = CloudMessage(
+            id: "temp-\(UUID().uuidString)",
+            itemId: item.itemId,
             message: trimmedMessage,
-            userName: trimmedUserName.isEmpty ? "匿名" : trimmedUserName,
-            type: .general
+            userName: finalUserName,
+            messageType: .general,
+            createdAt: Date()
         )
         
-        if success {
-            newMessage = ""
+        // Add optimistic message to local state immediately
+        localMessages.insert(optimisticMessage, at: 0)
+        refreshTrigger.toggle() // Force UI refresh
+        newMessage = "" // Clear input immediately
+        
+        do {
+            // Send to cloud
+            let messageId = try await AppwriteService.shared.postMessage(
+                itemId: item.itemId,
+                message: trimmedMessage,
+                userName: finalUserName,
+                msgType: "general"
+            )
+            
+            print("✅ Message posted to Appwrite with ID: \(messageId)")
+            
+            // Remove optimistic message and reload from server to ensure consistency
+            await MainActor.run {
+                if let index = localMessages.firstIndex(where: { $0.id == optimisticMessage.id }) {
+                    localMessages.remove(at: index)
+                    refreshTrigger.toggle()
+                }
+            }
+            
+            // Reload all messages from server
+            await loadMessages()
+            
+        } catch {
+            print("❌ Failed to send message: \(error)")
+            
+            // Remove optimistic message on failure
+            await MainActor.run {
+                if let index = localMessages.firstIndex(where: { $0.id == optimisticMessage.id }) {
+                    localMessages.remove(at: index)
+                    refreshTrigger.toggle()
+                }
+                
+                // Restore the message text for retry
+                newMessage = trimmedMessage
+            }
         }
         
         isAddingMessage = false
     }
-}
-
-// MARK: - ItemInfoHeader.swift
-struct ItemInfoHeader: View {
-    let item: Item
-    @Binding var showingQRCode: Bool
     
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.name ?? "Unknown")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    Text("ID: \(item.itemId ?? "")")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    if let location = item.location, !location.isEmpty {
-                        Text("場所: \(location)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+    private func handleQuickAction(_ messageType: MessageType) async {
+        print("🚀 Quick action triggered: \(messageType)")
+        
+        let message = getQuickActionMessage(for: messageType)
+        let finalUserName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let userName = finalUserName.isEmpty ? "システム" : finalUserName
+        
+        // Create optimistic message
+        let optimisticMessage = CloudMessage(
+            id: "temp-\(UUID().uuidString)",
+            itemId: item.itemId,
+            message: message,
+            userName: userName,
+            messageType: messageType,
+            createdAt: Date()
+        )
+        
+        // Add optimistic message immediately
+        localMessages.insert(optimisticMessage, at: 0)
+        refreshTrigger.toggle()
+        
+        do {
+            // Send to cloud
+            let messageId = try await AppwriteService.shared.postMessage(
+                itemId: item.itemId,
+                message: message,
+                userName: userName,
+                msgType: messageType.rawValue
+            )
+            
+            // Update item status if needed
+            if messageType != .general {
+                let newStatus: ItemStatus = {
+                    switch messageType {
+                    case .blue: return .working
+                    case .green: return .completed
+                    case .yellow: return .delayed
+                    case .red: return .problem
+                    default: return item.status
                     }
-                }
+                }()
                 
-                Spacer()
+                try await AppwriteService.shared.updateItemStatus(itemId: item.itemId, status: newStatus.rawValue)
                 
-                VStack(alignment: .trailing, spacing: 4) {
-                    HStack {
-                        Circle()
-                            .fill(item.statusEnum.color)
-                            .frame(width: 8, height: 8)
-                        Text(item.statusEnum.localizedString)
-                            .font(.caption)
-                            .foregroundColor(item.statusEnum.color)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(item.statusEnum.color.opacity(0.1))
-                    .cornerRadius(12)
+                // Update local item status
+                await MainActor.run {
+                    item.status = newStatus
                     
-                    Button(action: { showingQRCode = true }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "qrcode")
-                            Text("QR表示")
-                        }
-                        .font(.caption)
-                        .foregroundColor(.blue)
+                    // Update in dataManager
+                    if let index = dataManager.items.firstIndex(where: { $0.id == item.id }) {
+                        dataManager.items[index].status = newStatus
+                        dataManager.items[index].updatedAt = Date()
                     }
                 }
             }
+            
+            print("✅ Quick action message posted successfully")
+            
+            // Remove optimistic message and reload from server
+            await MainActor.run {
+                if let index = localMessages.firstIndex(where: { $0.id == optimisticMessage.id }) {
+                    localMessages.remove(at: index)
+                    refreshTrigger.toggle()
+                }
+            }
+            
+            await loadMessages()
+            
+        } catch {
+            print("❌ Failed to post quick action: \(error)")
+            
+            // Remove optimistic message on failure
+            await MainActor.run {
+                if let index = localMessages.firstIndex(where: { $0.id == optimisticMessage.id }) {
+                    localMessages.remove(at: index)
+                    refreshTrigger.toggle()
+                }
+            }
         }
-        .padding()
-        .background(Color(.systemGray6))
+    }
+    
+    private func getQuickActionMessage(for messageType: MessageType) -> String {
+        switch messageType {
+        case .blue: return UserDefaults.standard.string(forKey: "quickActionBlue") ?? "作業を開始しました"
+        case .green: return UserDefaults.standard.string(forKey: "quickActionGreen") ?? "作業を完了しました"
+        case .yellow: return UserDefaults.standard.string(forKey: "quickActionYellow") ?? "作業に遅れが生じています"
+        case .red: return UserDefaults.standard.string(forKey: "quickActionRed") ?? "問題が発生しました。"
+        default: return ""
+        }
     }
 }
 
-// MARK: - QuickActionButtons.swift
-struct QuickActionButtons: View {
-    let onAction: (MessageType) -> Void
+// MARK: - Enhanced Components (with different names to avoid conflicts)
+
+struct EnhancedQuickActionButtons: View {
+    let item: CloudItem
+    let dataManager: CloudDataManager
+    let isLoading: Bool
+    let onQuickAction: (MessageType) async -> Void
     
     private let quickActions: [MessageType] = [.blue, .green, .yellow, .red]
     
@@ -182,16 +335,21 @@ struct QuickActionButtons: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
                 ForEach(quickActions.indices, id: \.self) { index in
                     let action = quickActions[index]
-                    Button(action: { onAction(action) }) {
+                    Button(action: {
+                        Task {
+                            await onQuickAction(action)
+                        }
+                    }) {
                         Text(getButtonText(for: action))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
-                            .background(action.color)
+                            .background(isLoading ? Color.gray : action.color)
                             .cornerRadius(8)
                     }
+                    .disabled(isLoading)
                 }
             }
             .padding(.horizontal)
@@ -200,7 +358,6 @@ struct QuickActionButtons: View {
         .background(Color(.systemBackground))
     }
     
-    // Helper function to get button text for message types
     private func getButtonText(for messageType: MessageType) -> String {
         switch messageType {
         case .general: return ""
@@ -212,14 +369,23 @@ struct QuickActionButtons: View {
     }
 }
 
-// MARK: - MessagesList.swift
-struct MessagesList: View {
-    let messages: [Message]
-    let onDelete: (Message) -> Void
+struct EnhancedMessagesList: View {
+    let messages: [CloudMessage]
+    let isLoading: Bool
     
     var body: some View {
         List {
-            if messages.isEmpty {
+            if isLoading && messages.isEmpty {
+                VStack(spacing: 16) {
+                    ProgressView()
+                    Text("メッセージを読み込み中...")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+                .listRowSeparator(.hidden)
+            } else if messages.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "message")
                         .font(.system(size: 40))
@@ -227,14 +393,17 @@ struct MessagesList: View {
                     Text("まだメッセージがありません")
                         .font(.body)
                         .foregroundColor(.secondary)
+                    Text("下のボタンでメッセージを追加してください")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 40)
                 .listRowSeparator(.hidden)
             } else {
-                ForEach(messages.indices, id: \.self) { index in
-                    let message = messages[index]
-                    MessageRowView(message: message, onDelete: onDelete)
+                ForEach(messages) { message in
+                    EnhancedMessageRowView(message: message)
+                        .listRowSeparator(.visible)
                 }
             }
         }
@@ -242,15 +411,13 @@ struct MessagesList: View {
     }
 }
 
-// MARK: - MessageRowView.swift
-struct MessageRowView: View {
-    let message: Message
-    let onDelete: (Message) -> Void
+struct EnhancedMessageRowView: View {
+    let message: CloudMessage
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(message.userName ?? "匿名")
+                Text(message.userName)
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
@@ -258,414 +425,40 @@ struct MessageRowView: View {
                 Spacer()
                 
                 HStack(spacing: 8) {
-                    if message.messageTypeEnum != .general {
-                        Text("ステータス更新")
-                            .font(.caption2)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(message.messageTypeEnum.color)
-                            .cornerRadius(4)
+                    if message.messageType != .general {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(message.messageType.color)
+                                .frame(width: 6, height: 6)
+                            
+                            Text("ステータス更新")
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(message.messageType.color)
+                                .cornerRadius(4)
+                        }
                     }
                     
                     Text(formatDate(message.createdAt))
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                    
-                    Button(action: { onDelete(message) }) {
-                        Image(systemName: "trash")
-                            .font(.caption2)
-                            .foregroundColor(.red)
-                    }
                 }
             }
             
-            Text(message.message ?? "")
+            Text(message.message)
                 .font(.body)
                 .foregroundColor(.primary)
         }
         .padding(.vertical, 4)
     }
     
-    private func formatDate(_ date: Date?) -> String {
-        guard let date = date else { return "" }
+    private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ja_JP")
         formatter.dateStyle = .short
         formatter.timeStyle = .short
         return formatter.string(from: date)
-    }
-}
-
-// MARK: - QRCodeDisplayView.swift
-struct QRCodeDisplayView: View {
-    let item: Item
-    @Environment(\.presentationMode) var presentationMode
-    @State private var qrCodeImage: UIImage?
-    @State private var showingAlert = false
-    @State private var alertMessage = ""
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 30) {
-                Text(item.name ?? "Unknown")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .multilineTextAlignment(.center)
-                
-                Text("ID: \(item.itemId ?? "")")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                
-                if let qrCodeImage = qrCodeImage {
-                    Image(uiImage: qrCodeImage)
-                        .interpolation(.none)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 200, height: 200)
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .shadow(radius: 2)
-                } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 200, height: 200)
-                        .overlay(
-                            ProgressView()
-                        )
-                }
-                
-                VStack(spacing: 8) {
-                    Text("QR Contains:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text(generateQRContent())
-                        .font(.caption2)
-                        .foregroundColor(.blue)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
-                
-                Button("QRコードを保存") {
-                    saveQRCodeToPhotos()
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .cornerRadius(12)
-                .padding(.horizontal, 40)
-                
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("QRコード")
-            .navigationBarItems(trailing: Button("閉じる") {
-                presentationMode.wrappedValue.dismiss()
-            })
-        }
-        .onAppear {
-            generateQRCode()
-        }
-        .alert(isPresented: $showingAlert) {
-            Alert(
-                title: Text("保存結果"),
-                message: Text(alertMessage),
-                dismissButton: .default(Text("OK"))
-            )
-        }
-    }
-    
-    private func generateQRContent() -> String {
-        guard let itemId = item.itemId else { return "" }
-        // FIXED: Use proper URL format that the scanner can parse
-        return "https://digitalmemotag.app/item?item_id=\(itemId)"
-    }
-    
-    private func generateQRCode() {
-        let qrContent = generateQRContent()
-        guard let qrCodeData = qrContent.data(using: .utf8),
-              let filter = CIFilter(name: "CIQRCodeGenerator") else { return }
-        
-        filter.setValue(qrCodeData, forKey: "inputMessage")
-        filter.setValue("H", forKey: "inputCorrectionLevel")
-        
-        guard let qrCodeCIImage = filter.outputImage else { return }
-        
-        let scaleX = 200 / qrCodeCIImage.extent.size.width
-        let scaleY = 200 / qrCodeCIImage.extent.size.height
-        let transformedImage = qrCodeCIImage.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
-        
-        let context = CIContext()
-        guard let cgImage = context.createCGImage(transformedImage, from: transformedImage.extent) else { return }
-        
-        qrCodeImage = UIImage(cgImage: cgImage)
-    }
-    
-    private func saveQRCodeToPhotos() {
-        guard let image = qrCodeImage else {
-            alertMessage = "QRコードの生成に失敗しました"
-            showingAlert = true
-            return
-        }
-        
-        let saver = ImageSaver()
-        saver.writeToPhotoAlbum(image: image) { success, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    self.alertMessage = "保存に失敗しました: \(error.localizedDescription)"
-                } else if success {
-                    self.alertMessage = "QRコードを写真に保存しました"
-                } else {
-                    self.alertMessage = "保存がキャンセルされました"
-                }
-                self.showingAlert = true
-            }
-        }
-    }
-}
-
-// MARK: - QRScannerView.swift
-struct QRScannerView: View {
-    @State private var isPresentingScanner = false
-    @State private var scannedItemId: String?
-    @State private var showingManualEntry = false
-    @State private var manualItemId = ""
-    @State private var showingAlert = false
-    @State private var alertMessage = ""
-    @State private var showingItemDetail = false
-    @State private var foundItem: Item?
-    
-    @StateObject private var appwriteService = AppwriteService.shared
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 30) {
-                // Connection Status
-                HStack {
-                    Circle()
-                        .fill(appwriteService.isConnected ? Color.green : Color.red)
-                        .frame(width: 8, height: 8)
-                    Text(appwriteService.isConnected ? "Appwrite接続済み" : "Appwrite未接続")
-                        .font(.caption)
-                        .foregroundColor(appwriteService.isConnected ? .green : .red)
-                }
-                .padding(.top)
-                
-                // Header
-                VStack(spacing: 10) {
-                    Image(systemName: "qrcode.viewfinder")
-                        .font(.system(size: 80))
-                        .foregroundColor(.blue)
-                    
-                    Text("QRコードスキャン")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    
-                    Text("製品のQRコードをスキャンしてアクセス")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                
-                // Buttons
-                VStack(spacing: 16) {
-                    Button(action: { isPresentingScanner = true }) {
-                        HStack {
-                            Image(systemName: "camera")
-                            Text("QRコードをスキャン")
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(12)
-                    }
-                    
-                    Button(action: { showingManualEntry = true }) {
-                        HStack {
-                            Image(systemName: "keyboard")
-                            Text("手動で製品IDを入力")
-                        }
-                        .font(.headline)
-                        .foregroundColor(.blue)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(12)
-                    }
-                    
-                    Button(action: {
-                        Task {
-                            await appwriteService.testConnection()
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: "arrow.clockwise")
-                            Text("接続テスト")
-                        }
-                        .font(.headline)
-                        .foregroundColor(.orange)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.orange.opacity(0.1))
-                        .cornerRadius(12)
-                    }
-                }
-                .padding(.horizontal, 40)
-                
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("QRスキャン")
-        }
-        .navigationViewStyle(StackNavigationViewStyle())
-        .sheet(isPresented: $isPresentingScanner) {
-            QRCodeScannerView { result in
-                isPresentingScanner = false
-                handleScannedCode(result)
-            }
-        }
-        .sheet(isPresented: $showingManualEntry) {
-            ManualEntryView(itemId: $manualItemId) { itemId in
-                showingManualEntry = false
-                if !itemId.isEmpty {
-                    handleScannedCode(itemId)
-                }
-            }
-        }
-        .sheet(isPresented: $showingItemDetail) {
-            if let item = foundItem {
-                // Convert Item to CloudItem
-                if let cloudItem = item.toCloudItem() {
-                    NavigationView {
-                        CloudItemDetailView(item: cloudItem, dataManager: CloudDataManager.shared)
-                            .navigationBarItems(trailing: Button("閉じる") {
-                                showingItemDetail = false
-                            })
-                    }
-                } else {
-                    // Fallback if conversion fails
-                    Text("製品データの変換に失敗しました")
-                        .padding()
-                }
-            }
-        }
-        .alert(isPresented: $showingAlert) {
-            Alert(
-                title: Text("スキャン結果"),
-                message: Text(alertMessage),
-                dismissButton: .default(Text("OK"))
-            )
-        }
-    }
-    
-    private func handleScannedCode(_ code: String) {
-        print("📱 Scanned code: \(code)")
-        
-        let itemId = extractItemId(from: code)
-        print("🔍 Extracted item ID: \(itemId)")
-        
-        Task {
-            await processScannedItem(itemId: itemId)
-        }
-    }
-    
-    private func extractItemId(from code: String) -> String {
-        print("🔍 Processing code: \(code)")
-        
-        if let url = URL(string: code),
-           let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-            
-            // Check for item_id parameter (NEW FORMAT)
-            if let itemParam = components.queryItems?.first(where: { $0.name == "item_id" })?.value {
-                print("✅ Found item_id parameter: \(itemParam)")
-                return itemParam
-            }
-            
-            // Check for item parameter (LEGACY)
-            if let itemParam = components.queryItems?.first(where: { $0.name == "item" })?.value {
-                print("✅ Found item parameter: \(itemParam)")
-                return itemParam
-            }
-            
-            // Check legacy format: digitalmemotag://product/ITEM_ID
-            if url.scheme == "digitalmemotag" && url.host == "product" {
-                let itemId = url.path.replacingOccurrences(of: "/", with: "")
-                if !itemId.isEmpty {
-                    print("✅ Found legacy format item ID: \(itemId)")
-                    return itemId
-                }
-            }
-        }
-        
-        let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        print("✅ Using code as item ID: \(trimmedCode)")
-        return trimmedCode
-    }
-    
-    private func processScannedItem(itemId: String) async {
-        let context = PersistenceController.shared.container.viewContext
-        let request: NSFetchRequest<Item> = Item.fetchRequest()
-        request.predicate = NSPredicate(format: "itemId == %@", itemId)
-        
-        do {
-            let items = try context.fetch(request)
-            if let item = items.first {
-                await MainActor.run {
-                    foundItem = item
-                    item.markAsViewed()
-                    showingItemDetail = true
-                    alertMessage = "製品「\(item.name ?? "")」が見つかりました（ローカル）"
-                    print("✅ Found item in Core Data: \(item.name ?? "")")
-                }
-                return
-            }
-            
-            print("🌐 Item not in Core Data, checking Appwrite...")
-            
-            if let appwriteItemData = try? await AppwriteService.shared.getItem(itemId: itemId) {
-                await MainActor.run {
-                    let newItem = Item(context: context)
-                    newItem.id = UUID()
-                    newItem.itemId = itemId
-                    newItem.name = appwriteItemData["name"] as? String ?? "Unknown Product"
-                    newItem.location = appwriteItemData["location"] as? String ?? ""
-                    newItem.status = appwriteItemData["status"] as? String ?? "Working"
-                    newItem.createdAt = Date()
-                    newItem.updatedAt = Date()
-                    
-                    do {
-                        try context.save()
-                        foundItem = newItem
-                        showingItemDetail = true
-                        alertMessage = "製品「\(newItem.name ?? "")」が見つかりました（Appwriteから同期）"
-                        print("✅ Synced item from Appwrite: \(newItem.name ?? "")")
-                    } catch {
-                        alertMessage = "データの保存に失敗しました: \(error.localizedDescription)"
-                        showingAlert = true
-                    }
-                }
-            } else {
-                await MainActor.run {
-                    alertMessage = "製品ID「\(itemId)」が見つかりません。"
-                    showingAlert = true
-                    print("❌ Item not found: \(itemId)")
-                }
-            }
-            
-        } catch {
-            await MainActor.run {
-                alertMessage = "データベースエラーが発生しました: \(error.localizedDescription)"
-                showingAlert = true
-                print("❌ Database error: \(error)")
-            }
-        }
     }
 }
