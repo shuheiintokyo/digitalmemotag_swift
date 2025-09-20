@@ -63,6 +63,8 @@ class AuthenticationService: ObservableObject {
             self.currentSession = session
             self.isAuthenticated = true
             
+            AppwriteService.shared.updateClient(self.client)
+            
             print("✅ User registered and logged in: \(email)")
             
             isLoading = false
@@ -136,8 +138,12 @@ class AuthenticationService: ObservableObject {
             // Try to get the current user
             let user = try await account.get()
             
-            self.currentUser = user
-            self.isAuthenticated = true
+            await MainActor.run {
+                self.currentUser = user
+                self.isAuthenticated = true
+                
+                AppwriteService.shared.updateClient(self.client)
+            }
             
             print("✅ Existing session found for user: \(user.email)")
             

@@ -29,6 +29,7 @@ class CloudDataManager: ObservableObject {
         
         // Initial load
         Task {
+            try? await Task.sleep(nanoseconds: 500_000_000)
             await loadItems()
             startPeriodicRefresh()
         }

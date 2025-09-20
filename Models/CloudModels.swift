@@ -1,12 +1,6 @@
-//
-//  CloudModels.swift
-//  digitalmemotag
-//
-//  Cloud-first data models for multi-device synchronization
-//
-
 import Foundation
 import SwiftUI
+import JSONCodable
 
 // MARK: - CloudItem Model
 struct CloudItem: Identifiable, Hashable {
@@ -21,35 +15,86 @@ struct CloudItem: Identifiable, Hashable {
     
     // MARK: - Appwrite Conversion
     static func from(appwriteData: [String: Any]) -> CloudItem? {
-        print("🔍 Parsing item data: \(appwriteData)")
+        // Handle AnyCodable wrapper
+        var id: String?
+        var itemId: String?
+        var name: String?
         
-        // Get the document ID
-        guard let id = appwriteData["$id"] as? String else {
-            print("❌ No $id field found")
+        // Extract $id
+        if let idValue = appwriteData["$id"] {
+            if let anyCodable = idValue as? AnyCodable {
+                id = anyCodable.value as? String
+            } else {
+                id = idValue as? String
+            }
+        }
+        
+        // Extract item_id
+        if let itemIdValue = appwriteData["item_id"] {
+            if let anyCodable = itemIdValue as? AnyCodable {
+                itemId = anyCodable.value as? String
+            } else {
+                itemId = itemIdValue as? String
+            }
+        }
+        
+        // Extract name
+        if let nameValue = appwriteData["name"] {
+            if let anyCodable = nameValue as? AnyCodable {
+                name = anyCodable.value as? String
+            } else {
+                name = nameValue as? String
+            }
+        }
+        
+        // Check required fields
+        guard let id = id, let itemId = itemId, let name = name else {
+            print("❌ Missing required fields - id: \(id ?? "nil"), itemId: \(itemId ?? "nil"), name: \(name ?? "nil")")
             return nil
         }
         
-        // Get item_id - this is required
-        guard let itemId = appwriteData["item_id"] as? String, !itemId.isEmpty else {
-            print("❌ No item_id field or empty")
-            return nil
+        // Extract other fields with AnyCodable handling
+        var location = ""
+        if let locationValue = appwriteData["location"] {
+            if let anyCodable = locationValue as? AnyCodable {
+                location = (anyCodable.value as? String) ?? ""
+            } else {
+                location = (locationValue as? String) ?? ""
+            }
         }
         
-        // Get name - make it more lenient
-        let name = appwriteData["name"] as? String ?? "Unnamed"
-        
-        // Get location - optional
-        let location = appwriteData["location"] as? String ?? ""
-        
-        // Get status
-        let statusString = appwriteData["status"] as? String ?? "Working"
+        var statusString = "Working"
+        if let statusValue = appwriteData["status"] {
+            if let anyCodable = statusValue as? AnyCodable {
+                statusString = (anyCodable.value as? String) ?? "Working"
+            } else {
+                statusString = (statusValue as? String) ?? "Working"
+            }
+        }
         let status = ItemStatus(rawValue: statusString) ?? .working
         
         // Parse dates
-        let createdAt = parseAppwriteDate(appwriteData["$createdAt"] as? String) ?? Date()
-        let updatedAt = parseAppwriteDate(appwriteData["$updatedAt"] as? String) ?? Date()
+        var createdAt = Date()
+        if let createdValue = appwriteData["$createdAt"] {
+            if let anyCodable = createdValue as? AnyCodable {
+                if let dateString = anyCodable.value as? String {
+                    createdAt = parseAppwriteDate(dateString) ?? Date()
+                }
+            } else if let dateString = createdValue as? String {
+                createdAt = parseAppwriteDate(dateString) ?? Date()
+            }
+        }
         
-        print("✅ Successfully parsed item: id=\(id), itemId=\(itemId), name=\(name)")
+        var updatedAt = Date()
+        if let updatedValue = appwriteData["$updatedAt"] {
+            if let anyCodable = updatedValue as? AnyCodable {
+                if let dateString = anyCodable.value as? String {
+                    updatedAt = parseAppwriteDate(dateString) ?? Date()
+                }
+            } else if let dateString = updatedValue as? String {
+                updatedAt = parseAppwriteDate(dateString) ?? Date()
+            }
+        }
         
         return CloudItem(
             id: id,
@@ -96,26 +141,72 @@ struct CloudMessage: Identifiable, Hashable {
     let createdAt: Date
     
     // MARK: - Appwrite Conversion
+    // Also update CloudMessage.from method similarly:
     static func from(appwriteData: [String: Any]) -> CloudMessage? {
-        print("🔍 Parsing message data")
+        // Handle AnyCodable wrapper
+        var id: String?
+        var itemId: String?
+        var message: String?
+        var userName: String?
         
-        guard let id = appwriteData["$id"] as? String else {
-            print("❌ No $id field in message")
+        // Extract fields with AnyCodable handling
+        if let idValue = appwriteData["$id"] {
+            if let anyCodable = idValue as? AnyCodable {
+                id = anyCodable.value as? String
+            } else {
+                id = idValue as? String
+            }
+        }
+        
+        if let itemIdValue = appwriteData["item_id"] {
+            if let anyCodable = itemIdValue as? AnyCodable {
+                itemId = anyCodable.value as? String
+            } else {
+                itemId = itemIdValue as? String
+            }
+        }
+        
+        if let messageValue = appwriteData["message"] {
+            if let anyCodable = messageValue as? AnyCodable {
+                message = anyCodable.value as? String
+            } else {
+                message = messageValue as? String
+            }
+        }
+        
+        if let userNameValue = appwriteData["user_name"] {
+            if let anyCodable = userNameValue as? AnyCodable {
+                userName = anyCodable.value as? String
+            } else {
+                userName = userNameValue as? String
+            }
+        }
+        
+        guard let id = id, let itemId = itemId, let message = message, let userName = userName else {
+            print("❌ Failed to parse CloudMessage: missing required fields")
             return nil
         }
         
-        guard let itemId = appwriteData["item_id"] as? String, !itemId.isEmpty else {
-            print("❌ No item_id field in message")
-            return nil
+        var msgTypeString = "general"
+        if let msgTypeValue = appwriteData["msg_type"] {
+            if let anyCodable = msgTypeValue as? AnyCodable {
+                msgTypeString = (anyCodable.value as? String) ?? "general"
+            } else {
+                msgTypeString = (msgTypeValue as? String) ?? "general"
+            }
         }
-        
-        let message = appwriteData["message"] as? String ?? ""
-        let userName = appwriteData["user_name"] as? String ?? "匿名"
-        
-        let msgTypeString = appwriteData["msg_type"] as? String ?? "general"
         let messageType = MessageType(rawValue: msgTypeString) ?? .general
         
-        let createdAt = parseAppwriteDate(appwriteData["$createdAt"] as? String) ?? Date()
+        var createdAt = Date()
+        if let createdValue = appwriteData["$createdAt"] {
+            if let anyCodable = createdValue as? AnyCodable {
+                if let dateString = anyCodable.value as? String {
+                    createdAt = parseAppwriteDate(dateString) ?? Date()
+                }
+            } else if let dateString = createdValue as? String {
+                createdAt = parseAppwriteDate(dateString) ?? Date()
+            }
+        }
         
         return CloudMessage(
             id: id,

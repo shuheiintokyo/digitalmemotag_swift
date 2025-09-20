@@ -11,7 +11,7 @@ import Foundation
 class AppwriteService: ObservableObject {
     static let shared = AppwriteService()
     
-    let client = Client()
+    private var client = Client
     let databases: Databases
     
     // PRODUCTION: Use the correct database ID from your Appwrite dashboard
@@ -40,11 +40,11 @@ class AppwriteService: ObservableObject {
     }
     
     private init() {
-        client
+        self.client = Client()
             .setEndpoint("https://sfo.cloud.appwrite.io/v1")
             .setProject("68cba284000aabe9c076")
         
-        databases = Databases(client)
+        self.databases = Databases(client)
         
         // Test connection on initialization
         Task {
