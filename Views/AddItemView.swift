@@ -78,7 +78,7 @@ struct AddItemView: View {
         isCreating = true
         
         if let newItem = await dataManager.createItem(name: trimmedName, location: trimmedLocation) {
-            alertMessage = "製品「\(newItem.name)」を作成しました（ID: \(newItem.itemId)）"
+            alertMessage = "製品「\(newItem.name)」の作成に成功しました（ID: \(newItem.itemId)）"
             showingAlert = true
         } else {
             alertMessage = "製品の作成に失敗しました。ネットワーク接続を確認してください。"
